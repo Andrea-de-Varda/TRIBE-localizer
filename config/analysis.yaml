@@ -1,0 +1,32 @@
+# Single source of truth for all analysis parameters. Every decision here is logged in README.md.
+
+source:
+  repo: https://github.com/Pengrui-Han/LLM_Modularity.git
+  commit: e3ac7fbb3a6caea05c88343a8de6ec04a4035db8
+  local_dir: data/external/LLM_Modularity
+  domains: [Lan, MD, phys, ToM]
+
+stimuli:
+  output: data/stimuli/stimuli.csv.gz
+  word_seconds: 0.5        # one whitespace word every 0.5 s
+  onset_seconds: 10.0      # stimulus onset within each isolated timeline
+  timeline_seconds: 100.0  # TRIBE cuts one 100-TR segment per timeline (checkpoint duration_trs = 100, TR = 1 s)
+  half_seed: 20260930      # item split into halves, per task
+
+windows:                   # seconds; TRIBE output already includes its 5 s haemodynamic offset
+  answer:    {anchor: answer_onset, start: 0.0, end: 6.0}   # multivariate (main)
+  full:      {anchor: stimulus,     start: 0.0, end: 0.0}   # univariate: stimulus onset -> stimulus end
+  full_tail: {anchor: stimulus,     start: 0.0, end: 4.0}   # sensitivity: stimulus onset -> stimulus end + 4 s
+
+tribe:
+  checkpoint: facebook/tribev2
+  tribev2_commit: af58661791a351a448a489042a28f6c37e1c14b7
+  features: [text]
+  batch_size: 8
+  text_batch_size: 32
+  shard_size: 1000         # stimuli per shard; shards contain whole items
+
+parcels:
+  networks: [LANGUAGE_noAngG, MD, TOM, PHYSICS_Kean, PHYSICS]
+  output: data/parcels/fsaverage5/parcels_fsaverage5.npz
+  audit: data/parcels/fsaverage5/projection_audit.csv

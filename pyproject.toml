@@ -1,0 +1,19 @@
+[project]
+name = "tribeloc"
+version = "0.1.0"
+description = "TRIBE v2 localization of the 46 LLM-modularity tasks"
+requires-python = ">=3.11"
+dependencies = ["numpy", "pandas", "scipy", "pyyaml", "nibabel", "nilearn", "neuromaps", "scikit-learn", "matplotlib"]
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
