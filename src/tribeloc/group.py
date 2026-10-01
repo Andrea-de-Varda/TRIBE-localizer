@@ -153,3 +153,22 @@ def froi_responses(maps_h1, maps_h2, domains, vertices, target, fraction):
         chosen = vertices[np.argsort(contrast, kind="stable")[-max(1, int(np.ceil(fraction * len(vertices)))):]]
         out.append(ev[:, chosen].mean(1))
     return np.mean(out, axis=0)
+
+
+def task_selectivity(values, domains):
+    """Per task: its response minus the mean of the other three domains' mean responses (tasks weighted
+    equally within domain). Averaging over a domain's tasks gives target_effect for that domain."""
+    means = {d: values[domains == d].mean() for d in DOMAINS}
+    return np.array([v - np.mean([means[o] for o in DOMAINS if o != d]) for v, d in zip(values, domains)])
+
+
+def paired_signflip(diff, n_perm, rng):
+    """One-sided p for mean(diff) > 0 by flipping the sign of each paired difference; exact when 2^n <= n_perm."""
+    diff = np.asarray(diff, float)
+    n = len(diff)
+    if 2 ** n <= n_perm:
+        signs = 1 - 2 * ((np.arange(2 ** n)[:, None] >> np.arange(n)) & 1)
+        null = signs @ diff / n
+        return diff.mean(), (null >= diff.mean() - 1e-12).mean()
+    null = rng.choice([-1.0, 1.0], size=(n_perm, n)) @ diff / n
+    return diff.mean(), (1 + (null >= diff.mean() - 1e-12).sum()) / (1 + n_perm)

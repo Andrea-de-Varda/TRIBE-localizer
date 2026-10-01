@@ -148,3 +148,25 @@ def test_froi_responses_selects_on_one_half_and_evaluates_on_the_other():
     r = froi_responses(h1, h2, domains, np.arange(10), "MD", 0.1)
     # select v0 on h1 -> evaluate h2[:, 0] = [1, 1, 1, 1]; select v9 on h2 -> evaluate h1[:, 9] = [2, 2, 2, 2]
     assert np.allclose(r, 1.5)
+
+
+def test_task_selectivity_averages_to_target_effect():
+    from tribeloc.group import target_effect, task_selectivity
+    rng = np.random.default_rng(3)
+    domains = np.repeat(["Lan", "MD", "phys", "ToM"], [8, 20, 9, 9])
+    values = rng.normal(size=46)
+    sel = task_selectivity(values, domains)
+    for d in ["Lan", "MD", "phys", "ToM"]:
+        assert sel[domains == d].mean() == pytest.approx(target_effect(values, domains, d))
+    assert task_selectivity(values + 5, domains) == pytest.approx(sel)   # a constant offset cancels
+
+
+def test_paired_signflip_exact_and_sampled():
+    from tribeloc.group import paired_signflip
+    rng = np.random.default_rng(0)
+    m, p = paired_signflip(np.ones(8), 10000, rng)          # exact: only the all-positive pattern is >= observed
+    assert m == 1.0 and p == pytest.approx(1 / 256)
+    _, p = paired_signflip(np.array([1.0, -1.0] * 4), 10000, rng)
+    assert p > .3
+    _, p = paired_signflip(np.full(20, .5) + rng.normal(0, .1, 20), 10000, rng)   # sampled (2^20 > n_perm)
+    assert p < .001

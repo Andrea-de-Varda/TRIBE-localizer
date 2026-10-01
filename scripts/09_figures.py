@@ -2,6 +2,7 @@
 
   univariate_maps       each domain minus the other three, on the inflated surface, with the target parcels outlined
   network_bars_<sel>    predicted response of each parcel set to the four task domains (whole parcel; held-out fROI)
+  domain_bars_<sel>     transposed: for each task domain, the selectivity of each parcel set for it (and the raw response)
   enrichment            overlap of each domain map's top 10% with each parcel set, with spin-test significance
   length_language       language-parcel response vs stimulus length across the 46 tasks (the Language confound)
 """
@@ -88,6 +89,57 @@ def network_bars(stats, responses, selection, window):
     save_fig(fig, OUT / f"network_bars_{selection}_{window}")
 
 
+def domain_bars(dstats, selection, window, measure):
+    """One panel per task domain; bars = parcel sets. measure: 'selectivity' (task response minus the set's mean
+    response to the other three domains; with brackets, target set vs each other set) or 'response' (raw)."""
+    sel_csv = ROOT / load_config()["paths"]["analysis"] / "univariate" / f"task_selectivity_{selection}_{window}.csv"
+    per_task = pd.read_csv(sel_csv)
+    if measure == "response":
+        resp = pd.read_csv(ROOT / load_config()["paths"]["analysis"] / "univariate" / "parcel_responses.csv")
+        resp = resp[(resp.window == window) & (resp.selection == selection)]
+        per_task = resp.groupby(["network", "task", "domain"], sort=False).response.mean().reset_index()
+        per_task = per_task.rename(columns={"response": "selectivity"})
+    fig, axes = plt.subplots(1, len(DOMAINS), figsize=(10 * .85, 3.4 * .85))
+    rng = np.random.default_rng(0)
+    for ax, d in zip(axes, DOMAINS):
+        s = dstats[(dstats.domain == d) & (dstats.selection == selection) & (dstats.window == window)].set_index("network")
+        tgt = s.target_network.iloc[0]
+        col = f"mean_{measure}"
+        for x, net in enumerate(BAR_NETWORKS):
+            colour = DOMAIN_COLORS[NETWORK_TARGET[net]]
+            is_t = net == tgt
+            ax.bar(x, s.loc[net, col], width=.7, color=colour, alpha=.6 if is_t else .3, edgecolor="black",
+                   linewidth=1.2 if is_t else .8, zorder=2)
+            ax.errorbar(x, s.loc[net, col], yerr=s.loc[net, f"sem_{measure}"], color="black", capsize=3, lw=1.2, zorder=4)
+            v = per_task[(per_task.network == net) & (per_task.domain == d)].selectivity.to_numpy()
+            ax.scatter(x + rng.uniform(-.18, .18, len(v)), v, s=9, color=DOMAIN_COLORS[d], edgecolor="black",
+                       linewidth=.3, alpha=.8, zorder=3)
+        vals = per_task[per_task.domain == d].selectivity
+        lo, hi = min(0, vals.min()), vals.max()
+        step = .1 * (hi - lo)
+        top = hi
+        if measure == "selectivity":
+            ti = BAR_NETWORKS.index(tgt)
+            others = [n for n in BAR_NETWORKS if n != tgt and not (d == "phys" and n.startswith("PHYSICS"))]
+            others = sorted(others, key=lambda n: abs(BAR_NETWORKS.index(n) - ti))
+            for k, n in enumerate(others):
+                bracket(ax, ti, BAR_NETWORKS.index(n), hi + step * (.6 + 1.5 * k), step * .3,
+                        stars(s.loc[n, "p_target_gt_this"]), fontsize=7)
+            top = hi + step * (.6 + 1.5 * len(others))
+            ax.axhline(0, color="black", lw=.8, zorder=1)
+        ax.set_ylim(lo - .05 * (hi - lo), top + .3 * step)
+        ax.set_xticks(range(len(BAR_NETWORKS)), [NETWORK_LABELS[n] for n in BAR_NETWORKS], rotation=35, ha="right", fontsize=9)
+        ax.set_title(f"{DOMAIN_LABELS[d]} tasks", fontsize=11, weight="bold", color=DOMAIN_COLORS[d])
+        style_axes(ax)
+    axes[0].set_ylabel("Selectivity (a.u.)\ndomain − other domains" if measure == "selectivity"
+                       else "Predicted response (a.u.)", fontsize=11, labelpad=6)
+    where = "whole parcels" if selection == "whole_parcel" else "held-out fROIs"
+    fig.suptitle(f"Which parcels prefer each task domain ({where})" if measure == "selectivity"
+                 else f"Response of each parcel set to each task domain ({where})", fontsize=13)
+    fig.tight_layout(w_pad=1.2)
+    save_fig(fig, OUT / f"domain_bars_{measure}_{selection}_{window}")
+
+
 def enrichment(spin, window):
     s = spin[spin.window == window]
     nets = BAR_NETWORKS
@@ -150,9 +202,12 @@ def main():
     stats = pd.read_csv(A / "univariate" / "network_stats.csv")
     responses = pd.read_csv(A / "univariate" / "parcel_responses.csv")
     spin = pd.read_csv(A / "univariate" / "spin.csv")
+    dstats = pd.read_csv(A / "univariate" / "domain_stats.csv")
     for window in cfg["univariate"]["windows"]:
         for selection in stats[stats.window == window].selection.unique():
             network_bars(stats, responses, selection, window)
+            for measure in ["selectivity", "response"]:
+                domain_bars(dstats, selection, window, measure)
         enrichment(spin, window)
         length_language(U, parcels, cortex, window)
         surface_maps(U, parcels, cortex, window)
