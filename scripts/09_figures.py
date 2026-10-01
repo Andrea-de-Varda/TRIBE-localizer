@@ -9,7 +9,8 @@ Units: TRIBE was trained on BOLD detrended and z-scored per vertex and run, so p
   enrichment            overlap of each domain map's top 10% with each parcel set, with spin-test significance
   length_language       language-parcel response vs stimulus length across the 46 tasks (the Language confound)
   main_figure_<measure> A: contrast maps with target parcels outlined; B: per domain, every network's fROI
-                        response to it (measure=response) or selectivity for it (measure=selectivity)
+                        response to it (response) or selectivity for it (selectivity), or the target
+                        network's fROI response to the four domains (network)
   localizer_maps        t map of each text localizer contrast, with its network's parcels outlined
   localizer_validation  split-half held-out effect of each localizer in its own network's parcels
 """
@@ -195,13 +196,20 @@ def network_bars(stats, responses, selection, window):
     save_fig(fig, OUT / f"network_bars_{selection}_{window}")
 
 
-def main_figure(U, parcels, cortex, dstats, window, selection="froi_content", measure="response"):
-    """A: each domain's contrast map (whole cortex, target parcels outlined). B: for the same domain, every
-    network's fROI response to it (measure="response") or selectivity for it (measure="selectivity"), with the
-    target network's fROI compared with each other network's. Each bar panel has its own y-range."""
+def main_figure(U, parcels, cortex, dstats, window, selection="froi_content", measure="response", stats=None,
+                responses=None):
+    """A: each domain's contrast map (whole cortex, target parcels outlined). B, next to each map:
+    measure="response": every network's fROI response to that domain's tasks;
+    measure="selectivity": every network's fROI selectivity for that domain;
+    measure="network": the target network's fROI response to the four task domains (needs stats, responses).
+    Brackets compare the target with each alternative. Each bar panel has its own y-range."""
     from nilearn import datasets
     fs = datasets.fetch_surf_fsaverage("fsaverage5")
-    vals = domain_values(selection, window, measure)
+    if measure == "network":
+        sub = responses[(responses.selection == selection) & (responses.window == window)]
+        per_all = sub.groupby(["network", "task", "domain"], sort=False).response.mean().reset_index()
+    else:
+        vals = domain_values(selection, window, measure)
     fig = plt.figure(figsize=(12.2 * .9, 7.4 * .9))
     gb = fig.add_gridspec(4, 4, left=.1, right=.64, top=1.0, bottom=.02, wspace=-.06, hspace=-.12)
     gr = fig.add_gridspec(4, 1, left=.8, right=.955, top=.955, bottom=.085, hspace=.38)
@@ -220,15 +228,22 @@ def main_figure(U, parcels, cortex, dstats, window, selection="froi_content", me
         colorbar(fig, pos, vmax, "Δ predicted BOLD (z)", x=.648)
         bax = fig.add_subplot(gr[i])
         bar_axes.append(bax)
-        s = dstats[(dstats.domain == d) & (dstats.selection == selection) & (dstats.window == window)].set_index("network")
-        domain_panel(bax, s, vals, d, measure, None, None, rng, title=False)
-        bax.text(1.03, .5, f"{DOMAIN_LABELS[d]} tasks", transform=bax.transAxes, rotation=270, va="center", ha="left",
-                 fontsize=10, weight="bold", color=DOMAIN_COLORS[d])
+        if measure == "network":
+            s = stats[(stats.network == net) & (stats.selection == selection) & (stats.window == window)].iloc[0]
+            pt = per_all[per_all.network == net]
+            network_panel(bax, s, pt, net, min(0, pt.response.min()), pt.response.max(), rng, title=False)
+            side, colour = f"{NETWORK_LABELS[net]} fROIs", "black"
+        else:
+            s = dstats[(dstats.domain == d) & (dstats.selection == selection) & (dstats.window == window)].set_index("network")
+            domain_panel(bax, s, vals, d, measure, None, None, rng, title=False)
+            side, colour = f"{DOMAIN_LABELS[d]} tasks", DOMAIN_COLORS[d]
+        bax.text(1.03, .5, side, transform=bax.transAxes, rotation=270, va="center", ha="left",
+                 fontsize=10, weight="bold", color=colour)
         bax.set_ylabel("Selectivity (z)" if measure == "selectivity" else Z, fontsize=9)
         bax.tick_params(labelsize=8)
         if i < 3:
             bax.set_xticklabels([])
-    bar_axes[-1].set_xlabel("fROIs", fontsize=10)
+    bar_axes[-1].set_xlabel("Task domain" if measure == "network" else "fROIs", fontsize=10)
     view_labels(fig, first_row)
     fig.text(.005, .985, "A", fontsize=16, weight="bold", va="top")
     fig.text(.735, .985, "B", fontsize=16, weight="bold", va="top")
@@ -369,8 +384,8 @@ def main():
         length_language(U, parcels, cortex, window)
         surface_maps(U, parcels, cortex, window)
         if "froi_content" in set(stats.selection):
-            for measure in ["response", "selectivity"]:
-                main_figure(U, parcels, cortex, dstats, window, measure=measure)
+            for measure in ["response", "selectivity", "network"]:
+                main_figure(U, parcels, cortex, dstats, window, measure=measure, stats=stats, responses=responses)
         print("figures done:", window, flush=True)
     localizer_maps(parcels, cortex)
     localizer_validation()
