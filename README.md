@@ -12,9 +12,11 @@ This README is the running record of every decision, for the methods section. En
 - [x] Inference code and Slurm scripts written, helpers tested (2026-09-30)
 - [ ] TRIBE throughput benchmark on Engaging
 - [ ] Full TRIBE inference
-- [ ] Searchlight crossnobis and classification
-- [ ] Univariate contrasts
-- [ ] Parcel summaries, spin tests, figures
+- [x] Searchlight, univariate, parcel-summary and spin-test code written and tested on synthetic data (2026-09-30)
+- [ ] Searchlight crossnobis and classification (cluster)
+- [ ] Univariate contrasts (cluster)
+- [ ] Parcel summaries, spin tests (cluster or local)
+- [ ] Figures
 
 ## Repository layout
 
@@ -24,7 +26,7 @@ data/parcels/            original MNI parcel NIfTIs + label tables (see data/par
 data/parcels/fsaverage5/ projected parcels + cortex mask (npz) and projection audit (csv)
 data/stimuli/            stimulus table (one row per stimulus) and per-task summary
 data/external/           pinned clone of LLM_Modularity (git-ignored, re-created by script)
-src/tribeloc/            library: stimuli.py, parcels.py, inference.py
+src/tribeloc/            library: stimuli.py, parcels.py, inference.py, data.py, surface.py, rsa.py, group.py
 scripts/                 numbered pipeline steps
 slurm/                   Engaging environment setup, benchmark and array jobs
 tests/                   pytest
@@ -51,6 +53,14 @@ huggingface-cli login                       # once; Llama-3.2-3B is gated
 sbatch slurm/benchmark.sbatch               # shards 17 (smallest) and 82 (largest)
 python scripts/03_run_tribe.py --list       # number of shards (183)
 sbatch --array=0-45%8 --export=ALL,PER_TASK=4 slurm/inference.sbatch   # size from the benchmark
+```
+
+Then the analysis (CPU), and push the small results back:
+
+```bash
+sbatch --array=0-45 slurm/searchlight.sbatch                      # one job per task
+sbatch --dependency=afterok:<array job id> slurm/post.sbatch      # domain maps, univariate, parcels, spin tests
+git add results/analysis && git commit -m "Add analysis results" && git push
 ```
 
 Each shard is saved as `results/tribe/shards/shard_NNNN.npz` (`stim_id` plus one float32 stimulus × 20,484 array per window). Shards already present are skipped, so failed array tasks can simply be resubmitted.
@@ -86,12 +96,18 @@ Conclusion: task-demand localizers cannot be simulated in a stimulus-only encodi
 
 **Multivariate measure (main).** Whole-cortex surface searchlight; at every cortical vertex, discriminate correct from incorrect stimuli of a task. Primary measure: cross-validated Mahalanobis (crossnobis) distance between correct and incorrect patterns, using all items. Secondary: cross-validated classification accuracy with the number of items matched across tasks (repeated random subsamples). Cross-validation folds keep all four stimuli of an item together. Per task, then averaged within domain; leave-one-task-out cross-task decoding within domain as a secondary analysis. Parcels play no role in computing the maps, so their correspondence with the parcels can be tested afterwards (decision: Andrea).
 
-**Univariate measure.** At every vertex, a domain's mean response minus the mean of the other three domains. No length covariate (decision: Andrea); mean word count per domain is reported descriptively.
+**Searchlight implementation** (2026-09-30). Searchlights: for every cortical vertex, the cortical vertices of the same hemisphere within 10 mm, with distance measured along the edges of the fsaverage5 midthickness mesh (mean of white and pial coordinates; edge paths slightly overestimate true geodesic distance). Median 38 vertices per searchlight (range 11–86). Window: `answer`. For each item, d = (clean+A + corrupted+B − clean+B − corrupted+A)/2, the correct-minus-incorrect difference, which cancels item, problem and answer identity. Within a searchlight, the d vectors are whitened by the Ledoit–Wolf-shrunk uncentred second moment of d (Ledoit & Wolf, 2004, J. Multivariate Anal. 88:365–411), and the crossnobis distance is the mean inner product of whitened d over all pairs of distinct items, divided by the number of vertices. This is the leave-one-item-out cross-validated Mahalanobis distance (Walther et al., 2016, NeuroImage 137:188–200), with expectation 0 when correct and incorrect stimuli do not differ; the searchlight approach follows Kriegeskorte, Goebel & Bandettini (2006, PNAS 103:3863–3868). Because "noise" in a deterministic model is item-to-item variability, the effect is whitened by its own item-level variability; the uncentred moment makes the whitening identical under the permutation null. Null: swapping the correct/incorrect labels within an item flips the sign of its d exactly, so 1,000 random per-item sign-flip patterns (shared across vertices within a task) give a permutation null; family-wise error is controlled with the maximum statistic over cortical vertices (Nichols & Holmes, 2002, Hum. Brain Mapp. 15:1–25). Domain maps are the mean of task maps; their null averages task null maps permutation by permutation (flips independent across tasks). Each task is also analysed separately in its two item halves for the parcel analysis.
+
+**Validation of the searchlight code** (2026-09-30, synthetic data). Fake TRIBE predictions for npi (152 items; Gaussian noise, with a correctness effect planted in 200 vertices) were run through `04_searchlight.py`. All 139 FWE-significant searchlights contained planted vertices; none of the searchlights without planted vertices was significant. Crossnobis correlated 0.75 with the fraction of planted vertices in the searchlight. In searchlights without signal, accuracy averaged 0.499 and crossnobis −0.0001, about 0.04 null SDs below zero: estimating the whitening from the same items biases the distance slightly downwards, which is conservative, and the permutation test stays exact because every permutation uses the same whitening. Runtime for npi on one core: 12 s crossnobis, 8 min classification (about 175 µs per LDA fit, the same for every task because N is matched); peak memory 2 GB. The domain, parcel and spin-test scripts were run on per-task copies of this output; the spin null's mean enrichment was ≈1, as expected. All synthetic outputs were deleted.
+
+**Classification** (secondary). Shrinkage LDA (Ledoit–Wolf within-class covariance) on item-centred stimulus patterns (each item's four patterns minus their mean, which uses no label information), classifying correct vs incorrect stimuli; no bias term, since after centring the class means are ±d̄/2. 152 items per task (matched to the smallest task, npi), 20 random subsamples, 5 folds over items. Reported as the mean accuracy over subsamples.
+
+**Univariate measure.** At every vertex, a domain's mean response minus the mean of the other three domains, in the `full` window (`full_tail` as sensitivity). Task maps average all stimuli of a task (correct and incorrect); domain means weight tasks equally. Inference: the 46 task-to-domain labels are permuted 10,000 times; one-sided maximum-statistic FWE over cortical vertices. TRIBE outputs are compared between domains only, so no zero-input baseline is needed. No length covariate (decision: Andrea); mean word count per domain is reported descriptively.
 
 **Parcels on the surface.** Original MNI NIfTIs (checksums verified) projected to fsaverage5 with neuromaps 0.0.7 registration fusion (`mni152_to_fsaverage`, `fsavg_density='10k'`, nearest neighbour). Vertex counts match the pilot's projection exactly. Every parcel projects onto cortex. Nine vertices of PHYSICS lSPL fell in the right hemisphere (midline voxels) and are removed so each parcel stays in its own hemisphere. Cortex mask: Destrieux fsaverage5 labels excluding Unknown and Medial_wall (18,715 of 20,484 vertices). Audit: `data/parcels/fsaverage5/projection_audit.csv`.
 
-**Parcel summaries.** All parcels kept; probability atlases (LanA etc.) dropped. Physics is analysed with both parcel sets, `PHYSICS_Kean` and `PHYSICS`. Peak decodability per parcel: items are split into two random halves per task (seeded); the top 10% of searchlight centres within each parcel are selected on one half and their crossnobis distance is evaluated on the other, then the halves are swapped and averaged. Item split chosen over a clean/corrupted split because each half keeps the full balanced 2×2 and the halves share no strings (decision: Andrea). Whole-brain maps for display use all data.
+**Parcel summaries.** All parcels kept; probability atlases (LanA etc.) dropped. Physics is analysed with both parcel sets, `PHYSICS_Kean` and `PHYSICS`. Peak decodability per parcel: items are split into two random halves per task (seeded); the top 10% of searchlight centres within each parcel (rounded up) are selected on one half's crossnobis map and their mean crossnobis distance is evaluated on the other half's map, then the halves are swapped and averaged. This is done per task and parcel; network values average parcels equally, domain values average tasks equally, and the SEM is across tasks. The whole-parcel mean (no selection, all items) is reported alongside. Item split chosen over a clean/corrupted split because each half keeps the full balanced 2×2 and the halves share no strings (decision: Andrea). Whole-brain maps for display use all data.
 
-**Correspondence with the parcels** (decision: Andrea). Overlap between each domain's whole-cortex map and that network's parcels is tested against a spin-test null (random rotations of the map on the sphere, preserving spatial autocorrelation). Method reference to be verified before it enters the paper.
+**Correspondence with the parcels** (decision: Andrea). Overlap between each domain's whole-cortex map and that network's parcels is tested against a spin-test null (Alexander-Bloch et al., 2018, NeuroImage 178:540–551): 1,000 random rotations of the fsaverage5 sphere, the right hemisphere rotated by the mirror image of the left rotation; each vertex takes the value of the vertex nearest its inverse-rotated position, and medial-wall values rotated into cortex are dropped. Statistic: the fraction of the top 10% of cortical vertices of a domain's crossnobis map that fall in a network's parcels (enrichment = this fraction divided by the network's share of cortex); one-sided p = (1 + #rotations with overlap ≥ observed) / 1,001. All five parcel sets are tested against all four domain maps.
 
 **Figures.** Lateral and medial surface maps per domain for the multivariate and univariate results with parcel outlines; domain × network matrix of held-out peak decodability; per-parcel plots.

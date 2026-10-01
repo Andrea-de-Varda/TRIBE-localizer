@@ -30,3 +30,34 @@ parcels:
   networks: [LANGUAGE_noAngG, MD, TOM, PHYSICS_Kean, PHYSICS]
   output: data/parcels/fsaverage5/parcels_fsaverage5.npz
   audit: data/parcels/fsaverage5/projection_audit.csv
+
+paths:
+  shards: results/tribe/shards           # TRIBE window means (cluster only, git-ignored)
+  permutations: results/tribe/perm       # per-task permutation maps (cluster only, git-ignored)
+  analysis: results/analysis             # small derived results (tracked, pushed from the cluster)
+
+searchlight:
+  window: answer
+  radius_mm: 10.0          # geodesic, along edges of the fsaverage5 midthickness mesh, same hemisphere, cortex only
+  n_permutations: 1000     # within-item sign flips, max-statistic FWE
+  seed: 20261001
+
+classification:
+  window: answer
+  n_items: 152             # matched across tasks = smallest task (npi)
+  n_repeats: 20            # random item subsamples
+  n_folds: 5               # folds over items
+  seed: 20261002
+
+univariate:
+  windows: [full, full_tail]
+  n_permutations: 10000    # task-to-domain label permutations, max-statistic FWE
+  seed: 20261003
+
+parcel_summary:
+  top_fraction: 0.10       # fROI = top 10% of searchlight centres within a parcel, selected on the other half
+
+spin:
+  n_rotations: 1000
+  top_fraction: 0.10       # top 10% of cortical vertices of each domain map
+  seed: 20261004

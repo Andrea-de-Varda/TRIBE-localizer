@@ -41,3 +41,10 @@ def test_window_masks_at_1hz():
 def test_window_masks_rejects_empty_window():
     with pytest.raises(ValueError):
         window_masks(np.arange(5.0), next(row().itertuples()), WINDOWS)
+
+
+def test_shard_file_roundtrip_without_pickle(tmp_path):
+    rows = pd.concat([row(), row(stim_id="t__00000__clean_B")])
+    np.savez(tmp_path / "s.npz", stim_id=rows.stim_id.to_numpy().astype(str), answer=np.zeros((2, 3), np.float32))
+    z = np.load(tmp_path / "s.npz")  # allow_pickle=False by default
+    assert list(z["stim_id"]) == list(rows.stim_id)

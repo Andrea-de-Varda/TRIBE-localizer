@@ -110,7 +110,7 @@ def run_shards(table, shard_ids, cfg, out_dir, cache_root):
         model = load_model(t["checkpoint"], cache, t["batch_size"], t["text_batch_size"])
         maps = predict_shard(model, rows, cfg["windows"], s["word_seconds"], s["timeline_seconds"])
         tmp = path.with_suffix(".tmp.npz")
-        np.savez(tmp, stim_id=rows.stim_id.to_numpy(), **maps)
+        np.savez(tmp, stim_id=rows.stim_id.to_numpy().astype(str), **maps)
         tmp.rename(path)
         del model
         shutil.rmtree(cache, ignore_errors=True)
