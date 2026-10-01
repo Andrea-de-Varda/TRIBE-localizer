@@ -14,7 +14,7 @@ This README is the running record of every decision, for the methods section. En
 - [x] Univariate domain contrasts, whole-parcel summaries, spin tests, figures (2026-10-01)
 - [x] Multivariate analysis dropped and removed (2026-10-01)
 - [x] Text localizer stimuli built and tested; fROI pipeline tested on synthetic data (2026-10-01)
-- [ ] Localizer inference on Engaging (`slurm/localizers.sbatch`), fROIs, fROI-based bar plots
+- [x] Localizer inference (2026-10-01, Engaging job 24570531), fROIs, fROI-based bar plots
 
 ## Repository layout
 
@@ -186,3 +186,23 @@ Motivation: the parcels of different networks overlap (e.g. MD and physics), and
 **Task responses in fROIs.** The 46 task maps are averaged over each parcel's fROI vertices, then over parcels; the same statistics and figures as for whole parcels (`network_bars_froi_*`, `domain_bars_*_froi_*`).
 
 **Testing.** Unit tests for the stimuli (MD reproduces AlKhamissi's generator and answers; physics_task versions identical apart from the cue; physics_content word counts matched and content split; halves keep pairs together) and for the t statistics (match scipy), fROI selection and split-half validation. End-to-end run on synthetic localizer predictions with effects planted in one parcel per network: all four planted effects were recovered in the planted parcel only, and the unplanted physics_task localizer gave no effect. Synthetic outputs deleted.
+
+### 2026-10-01 — Localizer results (Engaging job 24570531)
+
+Inference: 1,129 localizer stimuli in 4 shards, 7 min on one A100; no errors.
+
+**Localizer validation** (`full` window; split-half held-out fROI effect = target − control in z, mean over parcels; parcels with held-out t > 2; spin test of the top 10% of the whole-cortex t map in the network's parcels):
+
+| Localizer | Whole parcel | Held-out fROI | Parcels t > 2 | Enrichment in own parcels (spin p) |
+|---|---|---|---|---|
+| Language: sentences > nonwords | 0.005 | 0.057 | 8/10 | 2.66 (.013); also ToM parcels 2.67 (.010) |
+| MD: hard > easy arithmetic | −0.002 | 0.004 | 7/20 (6 of them left-hemisphere) | 1.50 (.067) |
+| ToM: false belief > false photo | 0.094 | 0.139 | 10/10 | 4.41 (.002); also Language parcels 3.52 (.001) |
+| Physics, standard (cue only) | −0.007 | −0.001 | 4/11 (6 parcels t < −2) | 0.27 (.79) |
+| Physics, content-matched | 0.035 | 0.099 | 11/11 | 1.21 (.26); ToM parcels 3.60 (.004), Language 2.06 (.088) |
+
+Whole-cortex t maps (`plots/localizer_maps_full`): the language localizer gives the canonical left-lateralized fronto-temporal pattern and the ToM localizer bilateral TPJ, precuneus and medial prefrontal cortex. The MD localizer is weak and patchy. The standard physics localizer is negative over most of lateral cortex (the colour cue evokes more than the physics cue) and positive in medial occipital cortex. The content-matched physics localizer is positive over large parts of cortex (the physical descriptions evoke more response than the colour descriptions almost everywhere, most in medial parietal and temporal cortex), so it is not spatially specific to the physics parcels. Its fROIs are still well defined, because selection happens within the physics parcels (held-out effect positive in all 11).
+
+**Physics localizer choice (pre-specified rule).** The standard localizer fails both criteria (held-out effect ≤ 0; no enrichment), so the content-matched localizer is used: `froi_content` is the main fROI scheme. As with the visual TowerLoc, a contrast that differs only in the task cue does not localize in TRIBE, even in text with the cue preceding the description.
+
+**Task responses in localizer-defined fROIs** (`full`; target domain minus the other three, task-label permutation p; whole parcel → fROI): MD parcels, Formal 0.042 (p = .001) → 0.077 (p = .0001); ToM parcels, Social 0.047 (p = .0003) → 0.078 (p = .0001); Physics parcels, Physics 0.087 (p = .0001) → 0.105 (p = .0001; 0.102 with the failed standard localizer); Language parcels, Language −0.056 → −0.062 (length confound unchanged). Selective responses roughly double in MD and ToM fROIs. Caveat: in the physics parcels the failed standard localizer gives nearly the same gain, so the increase there does not by itself show that the localizer isolated physics-selective vertices. The MD localizer is weak, so the MD gain should be interpreted with the same caution. `full_tail` gives the same conclusions. fROI overlap between networks is negligible (largest: MD–Physics 4 vertices; Language–ToM 7).
