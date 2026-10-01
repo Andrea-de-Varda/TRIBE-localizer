@@ -34,13 +34,15 @@ def main():
     rows = table[table.task_index == a.task_index]
     task = rows.task.iloc[0]
     _, cortex, _ = load_parcels(ROOT / cfg["parcels"]["output"], ROOT / cfg["parcels"]["audit"])
-    sl = searchlights(cortex, sc["radius_mm"])
     start = time.time()
+    print(f"{task}: {rows.item.nunique()} items, {len(rows)} stimuli", flush=True)
+    sl = searchlights(cortex, sc["radius_mm"])
 
     X = load_predictions(table, rows, sc["window"], ROOT / P["shards"], cfg["tribe"]["shard_size"])
     idx, items = item_index(rows.reset_index(drop=True))
     half = rows.groupby("item").half.first().loc[items].to_numpy()
     D = item_differences(X, idx).astype(np.float64)
+    print(f"{task}: predictions loaded ({time.time() - start:.0f} s)", flush=True)
 
     rng = np.random.default_rng([sc["seed"], a.task_index])
     signs = rng.choice([-1.0, 1.0], size=(sc["n_permutations"], len(items)))
@@ -66,6 +68,7 @@ def main():
         d.mkdir(parents=True, exist_ok=True)
     np.savez_compressed(ROOT / P["analysis"] / "searchlight" / f"{task}.npz", **out)
     np.save(ROOT / P["permutations"] / f"{task}.npy", null)
+    print(f"{task}: saved ({time.time() - start:.0f} s)", flush=True)
 
 
 if __name__ == "__main__":

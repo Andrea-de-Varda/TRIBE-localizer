@@ -12,6 +12,7 @@ export HF_HOME=/orcd/data/evelina9/001/USERS/devar_ag/.hf_cache_new
 export HF_HUB_ENABLE_HF_TRANSFER=0
 export HF_HUB_DISABLE_TELEMETRY=1
 export TOKENIZERS_PARALLELISM=false
+export PYTHONUNBUFFERED=1   # logs appear immediately
 
 PROJECT_DIR=/orcd/data/evelina9/001/USERS/devar_ag/TRIBE-localizer
 cd "$PROJECT_DIR"

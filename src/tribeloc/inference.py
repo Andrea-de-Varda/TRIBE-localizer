@@ -67,6 +67,7 @@ def predict_shard(model, rows, windows, word_seconds, timeline_seconds):
     import torch
     events = build_events(rows, word_seconds, timeline_seconds)
     loader = model.data.get_loaders(events=events, split_to_build="all")["all"]
+    print(f"  features ready, predicting {len(rows)} timelines in {len(loader)} batches", flush=True)
     lookup = {sid: i for i, sid in enumerate(rows.stim_id)}
     rowlist = list(rows.itertuples())
     out = {k: np.zeros((len(rows), N_VERTICES), np.float32) for k in windows}
@@ -107,13 +108,16 @@ def run_shards(table, shard_ids, cfg, out_dir, cache_root):
         # (TRIBE caches 20 Llama layers per word, about 245 KB).
         cache = Path(cache_root) / f"shard_{k:04d}"
         start = time.time()
+        print(f"SHARD {k}: start, {len(rows)} stimuli, {int(rows.n_words.sum())} words, tasks {rows.task.unique().tolist()}", flush=True)
         model = load_model(t["checkpoint"], cache, t["batch_size"], t["text_batch_size"])
+        print(f"SHARD {k}: model loaded ({time.time() - start:.0f} s)", flush=True)
         maps = predict_shard(model, rows, cfg["windows"], s["word_seconds"], s["timeline_seconds"])
         tmp = path.with_suffix(".tmp.npz")
         np.savez(tmp, stim_id=rows.stim_id.to_numpy().astype(str), **maps)
         tmp.rename(path)
         del model
         shutil.rmtree(cache, ignore_errors=True)
+        print(f"SHARD {k}: saved {path.name}", flush=True)
         rec = dict(shard=k, n_stimuli=len(rows), n_words=int(rows.n_words.sum()), seconds=time.time() - start)
         log.append(rec)
         print(f"SHARD {k}: {rec}", flush=True)

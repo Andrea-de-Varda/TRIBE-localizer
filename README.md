@@ -10,7 +10,7 @@ This README is the running record of every decision, for the methods section. En
 - [x] Stimulus table built and tested (2026-09-30): 45,542 items, 182,168 stimuli
 - [x] Parcels projected to fsaverage5 (2026-09-30)
 - [x] Inference code and Slurm scripts written, helpers tested (2026-09-30)
-- [ ] TRIBE throughput benchmark on Engaging
+- [x] TRIBE throughput benchmark on Engaging (2026-09-30, job 24506323)
 - [ ] Full TRIBE inference
 - [x] Searchlight, univariate, parcel-summary and spin-test code written and tested on synthetic data (2026-09-30)
 - [ ] Searchlight crossnobis and classification (cluster)
@@ -105,6 +105,8 @@ Conclusion: task-demand localizers cannot be simulated in a stimulus-only encodi
 **Classification** (secondary). Shrinkage LDA (Ledoit–Wolf within-class covariance) on item-centred stimulus patterns (each item's four patterns minus their mean, which uses no label information), classifying correct vs incorrect stimuli; no bias term, since after centring the class means are ±d̄/2. 152 items per task (matched to the smallest task, npi), 20 random subsamples, 5 folds over items. Reported as the mean accuracy over subsamples.
 
 **Univariate measure.** At every vertex, a domain's mean response minus the mean of the other three domains, in the `full` window (`full_tail` as sensitivity). Task maps average all stimuli of a task (correct and incorrect); domain means weight tasks equally. Inference: the 46 task-to-domain labels are permuted 10,000 times; one-sided maximum-statistic FWE over cortical vertices. TRIBE outputs are compared between domains only, so no zero-input baseline is needed. No length covariate (decision: Andrea); mean word count per domain is reported descriptively.
+
+**Benchmark** (2026-09-30, Engaging job 24506323, one A100 80GB). Smallest shard (17, subject_verb_agreement; 1,000 stimuli, 3,068 words): 90 s. Largest (82, number_sorting; 75,056 words): 856 s, of which about 13 min was Llama feature extraction over 36,440 unique (word, context) pairs, since the two answers to a problem share the problem's words. Estimated total about 20 GPU-hours; output about 0.24 GB per shard (43 GB in all). The neuralset warning "LabelEncoder has only found one label" is expected and harmless: `TribeModel.from_pretrained` sets `average_subjects=True`, in which the output layer uses the shared average-subject weights and ignores the subject label (neuraltrain 0.0.2, `SubjectLayersModel.forward`), and the checkpoint has `subject_embedding: false`.
 
 **Parcels on the surface.** Original MNI NIfTIs (checksums verified) projected to fsaverage5 with neuromaps 0.0.7 registration fusion (`mni152_to_fsaverage`, `fsavg_density='10k'`, nearest neighbour). Vertex counts match the pilot's projection exactly. Every parcel projects onto cortex. Nine vertices of PHYSICS lSPL fell in the right hemisphere (midline voxels) and are removed so each parcel stays in its own hemisphere. Cortex mask: Destrieux fsaverage5 labels excluding Unknown and Medial_wall (18,715 of 20,484 vertices). Audit: `data/parcels/fsaverage5/projection_audit.csv`.
 

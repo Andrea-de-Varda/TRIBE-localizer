@@ -33,6 +33,7 @@ def main():
         raise RuntimeError("Run on a Slurm compute node, not a login node")
     shards = a.shards if a.shards is not None else range(a.array_index * a.per_task, min(n, (a.array_index + 1) * a.per_task))
     cache = Path(os.environ.get("TMPDIR", "/tmp")) / f"tribeloc_{os.environ['SLURM_JOB_ID']}"
+    print(f"{n} shards in total; this job: {list(shards)}", flush=True)
     log = run_shards(table, list(shards), cfg, a.out, cache)
     logdir = Path(a.out).parent / "timing"
     logdir.mkdir(parents=True, exist_ok=True)

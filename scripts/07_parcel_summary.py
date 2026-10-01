@@ -27,7 +27,7 @@ def main():
         froi_heldout=("froi_heldout", "mean"), froi_sem=("froi_heldout", "sem"),
         whole_parcel=("whole_parcel", "mean"), n_tasks=("task", "size")).reset_index()
     summary.to_csv(A / "network_domain_heldout.csv", index=False)
-    print(summary.pivot(index="network", columns="domain", values="froi_heldout")[DOMAINS].round(5).to_string())
+    print(summary.pivot(index="network", columns="domain", values="froi_heldout")[DOMAINS].round(5).to_string(), flush=True)
 
     domain_maps = np.load(A / "domain_maps.npz")
     spheres = sphere_coords()
@@ -39,7 +39,7 @@ def main():
         rows += [dict(domain=d, network=net, **r) for net, r in res.items()]
     spin = pd.DataFrame(rows)
     spin.to_csv(A / "spin_tests.csv", index=False)
-    print(spin.round(4).to_string(index=False))
+    print(spin.round(4).to_string(index=False), flush=True)
 
 
 if __name__ == "__main__":
