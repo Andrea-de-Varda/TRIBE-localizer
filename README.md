@@ -54,7 +54,7 @@ hf auth login                               # once, with HF_HOME as in slurm/com
 hf download meta-llama/Llama-3.2-3B config.json   # check access
 sbatch slurm/benchmark.sbatch               # shards 17 (smallest) and 82 (largest)
 python scripts/03_run_tribe.py --list       # number of shards (183)
-sbatch --array=0-45%8 --export=ALL,PER_TASK=4 slurm/inference.sbatch   # size from the benchmark
+sbatch slurm/inference.sbatch               # 46 array tasks x 4 shards, at most 6 GPUs at a time
 ```
 
 Then the analysis (CPU), and push the small results back:
