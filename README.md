@@ -49,7 +49,9 @@ On Engaging (GPU), from the project directory `/orcd/data/evelina9/001/USERS/dev
 ```bash
 mkdir -p logs
 bash slurm/setup_env.sh                     # once, in a compute allocation: creates conda env `tribe`
-huggingface-cli login                       # once; Llama-3.2-3B is gated
+export HF_HOME=/orcd/data/evelina9/001/USERS/devar_ag/.hf_cache_new
+hf auth login                               # once, with HF_HOME as in slurm/common.sh; Llama-3.2-3B is gated
+hf download meta-llama/Llama-3.2-3B config.json   # check access
 sbatch slurm/benchmark.sbatch               # shards 17 (smallest) and 82 (largest)
 python scripts/03_run_tribe.py --list       # number of shards (183)
 sbatch --array=0-45%8 --export=ALL,PER_TASK=4 slurm/inference.sbatch   # size from the benchmark
