@@ -6,43 +6,47 @@ import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from bglib import (CANDIDATES, HERE, ROOT, accuracy_permutation, build_texts, check_descriptions, confusion,  # noqa: E402
-                   load_config, pick_examples, picks, score_text, task_preferences)
+from bglib import (CANDIDATES, HERE, ROOT, accuracy_permutation, build_texts, confusion, load_config,  # noqa: E402
+                   pick_example, picks, score_text, task_preferences)
 
 
-def test_descriptions_cover_all_tasks_and_name_no_construct():
-    desc = pd.read_csv(HERE / "descriptions.tsv", sep="\t")
+def test_task_specs_cover_all_tasks():
+    spec = pd.read_csv(HERE / "tasks.tsv", sep="\t")
     tasks = pd.read_csv(ROOT / "data" / "stimuli" / "task_summary.csv").task
-    assert set(desc.task) == set(tasks) and desc.task.is_unique
-    check_descriptions(desc)
-    with pytest.raises(ValueError):
-        check_descriptions(pd.DataFrame(dict(task=["x"], description=["a theory of mind story"])))
+    assert set(spec.task) == set(tasks) and spec.task.is_unique
+    assert spec.notna().all().all() and (spec.background.str.len() > 30).all() and (spec.manipulation.str.len() > 30).all()
+    assert spec.manipulation.is_unique                      # no two tasks share a manipulation description
 
 
 def fake_stimuli():
     rows = []
     for task, dom in [("t1", "Lan"), ("t2", "MD")]:
-        for i in range(6):
-            rows.append(dict(task=task, domain=dom, correct=i % 2 == 0, n_words=3 + i * 20,
-                             text=" ".join(["w"] * (3 + i * 20))))
+        for item in range(3):
+            for problem in ["clean", "corrupted"]:
+                for answer in "AB":
+                    rows.append(dict(task=task, domain=dom, item=item, problem=problem, answer=answer,
+                                     text=f"{task} {problem} item{item}  answer{answer}\n"))
     return pd.DataFrame(rows)
 
 
-def test_pick_examples_prefers_short_correct_items_and_truncates():
+def test_pick_example_returns_the_clean_pair_of_one_item():
     s = fake_stimuli()
-    ex = pick_examples(s[s.task == "t1"], 2, 40, np.random.default_rng(0))
-    quoted = ex.split('" "')
-    assert len(quoted) == 2
-    assert all(len(q.strip('"').split()) <= 41 for q in quoted)
+    item, correct, incorrect = pick_example(s[s.task == "t1"], np.random.default_rng(0))
+    assert correct == f"t1 clean item{item} answerA" and incorrect == f"t1 clean item{item} answerB"
 
 
-def test_candidates_differ_only_in_the_regions():
+def test_abstracts_contain_the_pair_and_candidates_differ_only_in_the_regions():
     cfg = load_config()
-    desc = pd.DataFrame(dict(task=["t1", "t2"], description=["a short item", "another item"]))
-    t = build_texts(cfg, desc, fake_stimuli())
+    spec = pd.DataFrame(dict(task=["t1", "t2"], background=["Background one.", "Background two."],
+                             manipulation=["Manipulation one.", "Manipulation two."],
+                             correct_label=["grammatical", "correct"], incorrect_label=["ungrammatical", "incorrect"]))
+    t = build_texts(cfg, spec, fake_stimuli())
     assert len(t) == 2 * len(cfg["candidates"]) * len(CANDIDATES) * len(cfg["results"])
     for (task, style, k), g in t.groupby(["task", "style", "paraphrase"]):
+        ctx = g.context.iloc[0]
         assert g.context.nunique() == 1 and g.candidate.tolist() == CANDIDATES
+        item = g.example_item.iloc[0]
+        assert f'"{task} clean item{item} answerA"' in ctx and f'"{task} clean item{item} answerB"' in ctx
         stripped = {r.result.replace(cfg["candidates"][style][r.candidate], "{regions}") for r in g.itertuples()}
         assert stripped == {cfg["results"][k]}
     assert t.text.str.startswith(cfg["prefix"]).all()

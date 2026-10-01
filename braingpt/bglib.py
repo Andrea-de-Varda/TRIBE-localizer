@@ -1,8 +1,8 @@
 """BrainGPT literature-prior analysis: abstract construction, perplexity scoring and summary statistics.
 
-For each task, a short abstract describes what participants read (a neutral description plus real example items,
-no construct or network names) and ends with a results sentence naming one candidate set of brain regions. The
-candidate with the lowest perplexity is BrainGPT's pick (Luo et al., BrainBench).
+For each task, an abstract states what the task studies, the manipulation (what makes an item correct or incorrect)
+and one sampled item pair from the original dataset, and ends with a results sentence naming one candidate set of
+brain regions. The candidate with the lowest perplexity is BrainGPT's pick (Luo et al., BrainBench).
 """
 import re
 from pathlib import Path
@@ -16,53 +16,39 @@ ROOT = HERE.parent
 DOMAINS = ["Lan", "MD", "phys", "ToM"]
 CANDIDATES = DOMAINS + ["visual"]
 
-# Words that would name the construct or network in the hand-written descriptions (examples stay verbatim).
-BANNED = ["theory of mind", "mental", "belief", "believ", "reason", "physic", "intuitive", "working memory",
-          "memory", "language", "linguistic", "grammar", "syntax", "social", "moral", "emotion", "executive",
-          "demand", "cognitive", "logic", "math", "arithmetic", "network", "cortex", "brain"]
-
-
 def load_config():
     return yaml.safe_load((HERE / "config.yaml").read_text())
 
 
-def check_descriptions(desc):
-    """Raise if any hand-written description contains a banned (construct-naming) word."""
-    bad = [(t, w) for t, d in zip(desc.task, desc.description) for w in BANNED if w in d.lower()]
-    if bad:
-        raise ValueError(f"construct-naming words in descriptions: {bad}")
+def flat(text):
+    return " ".join(str(text).split())
 
 
-def clean(text, max_words):
-    words = text.split()
-    return " ".join(words[:max_words]) + (" …" if len(words) > max_words else "")
+def pick_example(rows, rng):
+    """One item of a task: the clean problem with its correct (answer A) and incorrect (answer B) completion."""
+    item = int(rng.choice(np.sort(rows.item.unique())))
+    clean = rows[(rows.item == item) & (rows.problem == "clean")].set_index("answer").text
+    return item, flat(clean["A"]), flat(clean["B"])
 
 
-def pick_examples(rows, n, max_words, rng):
-    """n correct stimuli of one task: random among those with at most max_words words, else the shortest
-    (truncated). Returned as quoted strings joined by spaces."""
-    rows = rows[rows.correct]
-    short = rows[rows.n_words <= max_words]
-    pool = short if len(short) >= n else rows.nsmallest(n, "n_words")
-    chosen = pool.iloc[rng.choice(len(pool), n, replace=False)] if len(pool) > n else pool
-    return " ".join(f'"{clean(t, max_words)}"' for t in chosen.text)
-
-
-def build_texts(cfg, desc, stimuli):
+def build_texts(cfg, tasks, stimuli):
     """One row per task x candidate style x candidate x results paraphrase."""
-    check_descriptions(desc)
     rng = np.random.default_rng(cfg["examples"]["seed"])
+    spec = tasks.set_index("task")
     rows = []
     for task, g in stimuli.groupby("task", sort=False):
-        d = desc.set_index("task").loc[task, "description"]
-        ex = pick_examples(g, cfg["examples"]["n"], cfg["examples"]["max_words"], rng)
-        context = cfg["prefix"] + cfg["background"].format(description=d, examples=ex) + " "
+        t = spec.loc[task]
+        item, correct, incorrect = pick_example(g, rng)
+        context = cfg["prefix"] + cfg["background"].format(
+            background=t.background, manipulation=t.manipulation, correct_label=t.correct_label,
+            incorrect_label=t.incorrect_label, correct=correct, incorrect=incorrect) + " "
         for style, cands in cfg["candidates"].items():
             for cand in CANDIDATES:
                 for k, template in enumerate(cfg["results"]):
                     result = template.format(regions=cands[cand])
                     rows.append(dict(task=task, domain=g.domain.iloc[0], style=style, candidate=cand, paraphrase=k,
-                                     context=context, result=result, text=context + result))
+                                     example_item=item, context=context, result=result,
+                                     text=context + result))
     return pd.DataFrame(rows)
 
 
