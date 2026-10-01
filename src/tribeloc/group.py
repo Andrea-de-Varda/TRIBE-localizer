@@ -110,3 +110,46 @@ def spin_test(values, cortex, networks, spheres, n_rotations, fraction, rng):
         out[k] = dict(overlap=obs[k], enrichment=obs[k] / base, null_mean_enrichment=nl.mean() / base,
                       p_spin=(1 + (nl >= obs[k]).sum()) / (1 + n_rotations))
     return out
+
+
+# ── univariate parcel summaries ───────────────────────────────────────────────
+
+def parcel_responses(task_maps, vertex_sets):
+    """(n_parcels x n_tasks) mean response over each parcel's vertices."""
+    return np.stack([task_maps[:, v].mean(1) for v in vertex_sets])
+
+
+def target_effect(values, domains, target):
+    """Mean over target-domain tasks minus the mean of the other domains' means (tasks weighted equally)."""
+    others = [values[domains == d].mean() for d in DOMAINS if d != target]
+    return values[domains == target].mean() - np.mean(others)
+
+
+def target_permutation(values, domains, target, n_perm, rng):
+    """target_effect and its one-sided p from permuting the task-to-domain labels."""
+    obs = target_effect(values, domains, target)
+    null = np.array([target_effect(values, rng.permutation(domains), target) for _ in range(n_perm)])
+    return obs, (1 + (null >= obs).sum()) / (1 + n_perm)
+
+
+def pairwise_permutation(values, domains, target, other, n_perm, rng):
+    """Target minus one other domain (task means), one-sided p from permuting labels between the two."""
+    keep = np.isin(domains, [target, other])
+    v, d = values[keep], domains[keep]
+    diff = lambda lab: v[lab == target].mean() - v[lab == other].mean()
+    obs = diff(d)
+    null = np.array([diff(rng.permutation(d)) for _ in range(n_perm)])
+    return obs, (1 + (null >= obs).sum()) / (1 + n_perm)
+
+
+def froi_responses(maps_h1, maps_h2, domains, vertices, target, fraction):
+    """Held-out fROI responses per task (n_tasks,): select the top `fraction` of `vertices` by the target
+    domain's contrast (target minus the mean of the other domain means) in one item half, average every
+    task's response over them in the other half, then swap halves and average."""
+    i = DOMAINS.index(target)
+    out = []
+    for sel, ev in [(maps_h1, maps_h2), (maps_h2, maps_h1)]:
+        contrast = domain_contrast(sel[:, vertices], domains)[i]
+        chosen = vertices[np.argsort(contrast, kind="stable")[-max(1, int(np.ceil(fraction * len(vertices)))):]]
+        out.append(ev[:, chosen].mean(1))
+    return np.mean(out, axis=0)

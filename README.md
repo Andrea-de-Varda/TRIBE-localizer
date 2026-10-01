@@ -15,7 +15,9 @@ This README is the running record of every decision, for the methods section. En
 - [x] Shard quality check (2026-10-01)
 - [x] Searchlight, univariate, parcel-summary and spin-test code written and tested on synthetic data (2026-09-30)
 - [x] Searchlight crossnobis and classification, univariate contrasts, parcel summaries, spin tests: round 1 (2026-10-01; see Results)
-- [ ] Figures
+- [x] Decision (2026-10-01): univariate analysis is the main result; multivariate not reported
+- [x] Univariate parcel summaries, spin tests and figures (whole parcel) (2026-10-01)
+- [ ] Held-out univariate fROIs (needs `06_univariate.py` re-run for item-half maps)
 
 ## Repository layout
 
@@ -25,8 +27,9 @@ data/parcels/            original MNI parcel NIfTIs + label tables (see data/par
 data/parcels/fsaverage5/ projected parcels + cortex mask (npz) and projection audit (csv)
 data/stimuli/            stimulus table (one row per stimulus) and per-task summary
 data/external/           pinned clone of LLM_Modularity (git-ignored, re-created by script)
-src/tribeloc/            library: stimuli.py, parcels.py, inference.py, data.py, surface.py, rsa.py, group.py
-scripts/                 numbered pipeline steps
+src/tribeloc/            library: stimuli.py, parcels.py, inference.py, data.py, surface.py, rsa.py, group.py, plotting.py
+scripts/                 numbered pipeline steps (04, 05, 07: multivariate, not reported)
+plots/                   figures (SVG with editable text + PNG)
 slurm/                   Engaging environment setup, benchmark and array jobs
 tests/                   pytest
 results/                 outputs (git-ignored)
@@ -59,11 +62,12 @@ sbatch slurm/inference.sbatch               # 46 array tasks x 4 shards, at most
 Then the analysis (CPU), and push the small results back:
 
 ```bash
-sbatch slurm/qc.sbatch                                            # shard quality check -> results/analysis/qc/
-sbatch --array=0-45 slurm/searchlight.sbatch                      # one job per task
-sbatch --dependency=afterok:<array job id> slurm/post.sbatch      # domain maps, univariate, parcels, spin tests
-git add results/analysis && git commit -m "Add analysis results" && git push
+sbatch slurm/qc.sbatch            # shard quality check -> results/analysis/qc/
+sbatch slurm/post.sbatch          # univariate (main): 06 maps, 08 parcel summaries + spin tests, 09 figures -> plots/
+git add results/analysis plots logs && git commit -m "Analysis results" && git push
 ```
+
+The multivariate searchlight (`slurm/searchlight.sbatch`, scripts 04, 05, 07) is kept for future work but is not part of the reported analysis (see the decision log, 2026-10-01).
 
 Each shard is saved as `results/tribe/shards/shard_NNNN.npz` (`stim_id` plus one float32 stimulus × 20,484 array per window). Shards already present are skipped, so failed array tasks can simply be resubmitted.
 
@@ -129,3 +133,17 @@ Conclusion: task-demand localizers cannot be simulated in a stimulus-only encodi
 **Univariate domain contrasts localize for MD, Physics and ToM, not for Language.** Enrichment of the top 10% of cortex (`full` window) in the target parcels: MD > others in MD parcels 3.13; Physics > others in PHYSICS 3.91 and PHYSICS_Kean 2.89 (also MD 1.96, which overlaps physics); ToM > others in TOM 3.43 (and Language parcels 4.96); Language > others in Language parcels 0.02. Peaks: MD in the intraparietal sulcus, angular gyrus and middle frontal gyrus; Physics in the supramarginal gyrus, lateral occipital cortex and pre/postcentral sulci; ToM in bilateral STS/STG and superior frontal gyrus; Language in medial cortex (pericallosal sulcus, precuneus, anterior cingulate). FWE-significant vertices: Language 142, MD 439, Physics 577, ToM 495. `full_tail` gives the same pattern. Spin tests for the univariate maps are not computed yet.
 
 **The Language univariate result is confounded with stimulus length.** Across the 46 tasks, the mean predicted response in the Language parcels correlates with mean stimulus length (Spearman ρ = 0.69, p = 1e-7; within Language tasks ρ = 0.83, within MD ρ = 0.92). Language-parcel response by domain follows length: Lan 0.173 (5.9 words), MD 0.205 (21.6), Physics 0.234 (47.7), ToM 0.272 (36.8). The response averaged over a short stimulus starting from silence is lower, so domain contrasts for Language cannot be separated from length with these stimuli. (The earlier decision not to use a length covariate is revisited after these results.)
+
+### 2026-10-01 — Decisions after round 1 (Andrea)
+
+- **The univariate domain contrast is the main analysis.** The multivariate correctness analysis is not reported in this paper: its maps are not localizing in TRIBE (see Round 1), which is a property of the model that may be studied separately. Code and round-1 outputs are kept (`04_searchlight.py`, `05_domain_maps.py`, `07_parcel_summary.py`, `results/analysis/searchlight/`, `domain_maps.npz`, `parcel_heldout.csv`, `network_domain_heldout.csv`, `spin_tests.csv`).
+- **Language is reported with the length confound stated**, no adjustment (option b): every task is text, the language network responds to all of them, and its predicted response grows with the amount of text. Stimulus lengths do not overlap between Language (3–11 words) and Physics (≥15 words), so no adjustment can separate domain from length.
+- **Spin tests for the univariate maps** added.
+
+**Univariate parcel analysis** (`08_univariate_summary.py`). For each parcel set (target domain: Language parcels ↔ Language tasks, MD ↔ Formal, ToM ↔ Social, both physics sets ↔ Physics) and window: each task's response is averaged over a parcel's cortical vertices, then over parcels (equal weight). The target domain's mean over tasks is compared with the mean of the other three domain means, and with each other domain separately; one-sided p-values come from 10,000 permutations of the task-to-domain labels (tasks are the unit, n = 46). Held-out fROI version (when item-half maps are available): within each parcel, the top 10% of vertices by the target domain's contrast (target minus the mean of the other domain means) in one item half; every task's response is measured there in the other half; then halves are swapped and averaged. Spin tests as described above, on each domain's contrast map against each parcel set.
+
+**Figures** (`09_figures.py`, `plots/`; domain names and colours as in the LLM-modularity paper: Language, Formal = MD tasks, Physics, Social = ToM tasks). `univariate_maps_<window>`: each domain minus the other three, inflated surface, lateral and medial views of both hemispheres, target parcels outlined (physics: the `PHYSICS` set), symmetric colour scale at each row's 99th percentile of |value|, medial wall grey. `network_bars_<selection>_<window>`: response of each parcel set to the four domains (bars = mean over tasks ± SEM; dots = tasks), with brackets for the target domain against each other domain (one-sided permutation p, uncorrected: * < .05, ** < .01, *** < .001). `enrichment_<window>`: overlap of each domain map's top 10% with each parcel set, relative to the parcel set's share of cortex (* spin p < .05). `length_language_<window>`: language-parcel response against mean words per stimulus across the 46 tasks.
+
+### 2026-10-01 — Univariate results (whole parcels)
+
+`full` window; target domain minus the mean of the other three (permutation p, n = 46 tasks): MD parcels, Formal +0.042 (p = .0008); ToM parcels, Social +0.047 (p = .0002); Physics parcels, Physics +0.087 (p = .0001); Physics (Kean) parcels, Physics +0.069 (p = .0001); Language parcels, Language −0.056 (p = .998). Pairwise: MD parcels prefer Formal over Social (p < .001) but not significantly over Language or Physics tasks; ToM parcels prefer Social over all three (Language p < .05, Formal and Physics p < .001); both physics sets prefer Physics over all three (p < .001). Spin tests (top 10%): Formal map in MD parcels 3.13× (p = .001); Physics map in PHYSICS 3.90× (p = .001), PHYSICS_Kean 2.90× (p = .013), and MD 1.96× (p = .013; physics and MD parcels overlap); Social map in ToM 3.43× (p = .009) and Language 4.96× (p = .001); Language map in Language parcels 0.02× (p = 1.0). `full_tail` gives the same conclusions. In the length scatter, at matched lengths Language tasks evoke a larger language-parcel response than Formal tasks (e.g. about 0.18 vs 0.11 at 5 words), but this is descriptive.

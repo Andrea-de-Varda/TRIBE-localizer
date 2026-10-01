@@ -111,9 +111,40 @@ def test_univariate_task_means_from_shards(tmp_path):
     uni = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(uni)
     table = pd.DataFrame(dict(stim_id=[f"s{i}" for i in range(8)], task=["a"] * 4 + ["b"] * 4,
-                              item=[0] * 4 + [0] * 4, task_index=[0] * 4 + [1] * 4))
+                              item=[0, 0, 1, 1] * 2, task_index=[0] * 4 + [1] * 4, half=[1, 1, 2, 2] * 2))
     x = np.arange(8.0)[:, None] * np.ones((8, 20484))
     np.savez(tmp_path / "shard_0000.npz", stim_id=table.stim_id.to_numpy()[:4].astype(str), full=x[:4])
     np.savez(tmp_path / "shard_0001.npz", stim_id=table.stim_id.to_numpy()[4:][::-1].astype(str), full=x[4:][::-1])
-    m = uni.task_means(table, ["full"], tmp_path, shard_size=4)["full"]
+    m, by_half = uni.task_means(table, ["full"], tmp_path, shard_size=8)["full"]
     assert np.allclose(m[:, 0], [1.5, 5.5])
+    assert np.allclose(by_half[:, :, 0], [[0.5, 2.5], [4.5, 6.5]])
+
+
+def test_target_effect_and_permutation():
+    from tribeloc.group import pairwise_permutation, target_effect, target_permutation
+    domains = np.repeat(["Lan", "MD", "phys", "ToM"], 6)
+    values = np.zeros(24)
+    values[domains == "MD"] = 1.0
+    assert target_effect(values, domains, "MD") == pytest.approx(1.0)
+    assert target_effect(values, domains, "Lan") == pytest.approx(-1 / 3)
+    rng = np.random.default_rng(0)
+    obs, p = target_permutation(values + rng.normal(0, .1, 24), domains, "MD", 2000, rng)
+    assert obs > 0.8 and p < 0.01
+    _, p = target_permutation(rng.normal(size=24), domains, "MD", 2000, rng)
+    assert p > 0.01
+    obs, p = pairwise_permutation(values, domains, "MD", "ToM", 2000, rng)
+    assert obs == pytest.approx(1.0) and p < 0.01
+
+
+def test_froi_responses_selects_on_one_half_and_evaluates_on_the_other():
+    from tribeloc.group import froi_responses
+    domains = np.array(["Lan", "MD", "phys", "ToM"])
+    h1 = np.zeros((4, 10))
+    h2 = np.zeros((4, 10))
+    h1[1, 0] = 5.0     # in half 1, MD prefers vertex 0
+    h2[1, 9] = 5.0     # in half 2, MD prefers vertex 9
+    h2[:, 0] = 1.0     # half-2 responses at vertex 0
+    h1[:, 9] = 2.0     # half-1 responses at vertex 9
+    r = froi_responses(h1, h2, domains, np.arange(10), "MD", 0.1)
+    # select v0 on h1 -> evaluate h2[:, 0] = [1, 1, 1, 1]; select v9 on h2 -> evaluate h1[:, 9] = [2, 2, 2, 2]
+    assert np.allclose(r, 1.5)

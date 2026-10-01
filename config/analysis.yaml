@@ -55,7 +55,15 @@ univariate:
   seed: 20261003
 
 parcel_summary:
-  top_fraction: 0.10       # fROI = top 10% of searchlight centres within a parcel, selected on the other half
+  top_fraction: 0.10       # fROI = top 10% of vertices within a parcel, selected on the other item half
+  n_permutations: 10000    # task-to-domain label permutations for the network x domain tests
+  seed: 20261005
+  targets:                 # the domain each parcel set is expected to prefer
+    LANGUAGE_noAngG: Lan
+    MD: MD
+    TOM: ToM
+    PHYSICS_Kean: phys
+    PHYSICS: phys
 
 spin:
   n_rotations: 1000
