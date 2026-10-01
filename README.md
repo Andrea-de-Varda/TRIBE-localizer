@@ -12,11 +12,9 @@ This README is the running record of every decision, for the methods section. En
 - [x] Inference code and Slurm scripts written, helpers tested (2026-09-30)
 - [x] TRIBE throughput benchmark on Engaging (2026-09-30, job 24506323)
 - [x] Full TRIBE inference (2026-10-01, array job 24508074; 183/183 shards, no errors)
-- [ ] Shard quality check (`slurm/qc.sbatch`)
+- [x] Shard quality check (2026-10-01)
 - [x] Searchlight, univariate, parcel-summary and spin-test code written and tested on synthetic data (2026-09-30)
-- [ ] Searchlight crossnobis and classification (cluster)
-- [ ] Univariate contrasts (cluster)
-- [ ] Parcel summaries, spin tests (cluster or local)
+- [x] Searchlight crossnobis and classification, univariate contrasts, parcel summaries, spin tests: round 1 (2026-10-01; see Results)
 - [ ] Figures
 
 ## Repository layout
@@ -119,3 +117,15 @@ Conclusion: task-demand localizers cannot be simulated in a stimulus-only encodi
 **Correspondence with the parcels** (decision: Andrea). Overlap between each domain's whole-cortex map and that network's parcels is tested against a spin-test null (Alexander-Bloch et al., 2018, NeuroImage 178:540–551): 1,000 random rotations of the fsaverage5 sphere, the right hemisphere rotated by the mirror image of the left rotation; each vertex takes the value of the vertex nearest its inverse-rotated position, and medial-wall values rotated into cortex are dropped. Statistic: the fraction of the top 10% of cortical vertices of a domain's crossnobis map that fall in a network's parcels (enrichment = this fraction divided by the network's share of cortex); one-sided p = (1 + #rotations with overlap ≥ observed) / 1,001. All five parcel sets are tested against all four domain maps.
 
 **Figures.** Lateral and medial surface maps per domain for the multivariate and univariate results with parcel outlines; domain × network matrix of held-out peak decodability; per-parcel plots.
+
+## Results
+
+### 2026-10-01 — Round 1
+
+**Shard quality check** (`results/analysis/qc/`). All 183 shards complete (182,168 stimuli), all values finite, predictions vary across stimuli in every shard, and no two stimuli share a prediction. The item-level correct-minus-incorrect difference in the `answer` window is small relative to the spread across stimuli: mean |d| / SD across stimuli 0.01–0.33 per task, largest for Language tasks (e.g. hypernymy 0.33, subject–verb agreement 0.23), where the single-word answer is a large part of a short stimulus.
+
+**Multivariate correctness maps are not localizing.** Every cortical vertex is FWE-significant for every domain (18,715/18,715). The four domain crossnobis maps are nearly identical (pairwise r = 0.987–0.995 across vertices). All four peak in the same ventral and orbital regions (gyrus rectus, orbital gyri, right parahippocampal, lingual and inferior temporal gyri, plus left lateral superior temporal gyrus); these are regions of strong susceptibility dropout in human fMRI, where TRIBE's training signal is weakest. Classification accuracy is nearly uniform across cortex (mean / max: Language 0.754 / 0.792, MD 0.587 / 0.615, Physics 0.548 / 0.564, ToM 0.612 / 0.641). Held-out parcel fROIs give the same network profile for every domain (ToM ≥ Language > MD > Physics parcels), with no domain × network interaction. Spin tests: the top 10% of every domain map is under-represented in every parcel set (enrichment 0.02–0.74; all p_spin > 0.6). Interpretation: TRIBE's vertex outputs are read out from one shared latent state, so correctness information encoded there reaches every vertex. Whitened (noise-normalized) decodability then reflects the readout geometry rather than where a computation takes place.
+
+**Univariate domain contrasts localize for MD, Physics and ToM, not for Language.** Enrichment of the top 10% of cortex (`full` window) in the target parcels: MD > others in MD parcels 3.13; Physics > others in PHYSICS 3.91 and PHYSICS_Kean 2.89 (also MD 1.96, which overlaps physics); ToM > others in TOM 3.43 (and Language parcels 4.96); Language > others in Language parcels 0.02. Peaks: MD in the intraparietal sulcus, angular gyrus and middle frontal gyrus; Physics in the supramarginal gyrus, lateral occipital cortex and pre/postcentral sulci; ToM in bilateral STS/STG and superior frontal gyrus; Language in medial cortex (pericallosal sulcus, precuneus, anterior cingulate). FWE-significant vertices: Language 142, MD 439, Physics 577, ToM 495. `full_tail` gives the same pattern. Spin tests for the univariate maps are not computed yet.
+
+**The Language univariate result is confounded with stimulus length.** Across the 46 tasks, the mean predicted response in the Language parcels correlates with mean stimulus length (Spearman ρ = 0.69, p = 1e-7; within Language tasks ρ = 0.83, within MD ρ = 0.92). Language-parcel response by domain follows length: Lan 0.173 (5.9 words), MD 0.205 (21.6), Physics 0.234 (47.7), ToM 0.272 (36.8). The response averaged over a short stimulus starting from silence is lower, so domain contrasts for Language cannot be separated from length with these stimuli. (The earlier decision not to use a length covariate is revisited after these results.)
