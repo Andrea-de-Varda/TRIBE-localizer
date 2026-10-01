@@ -23,7 +23,7 @@ from scipy.stats import spearmanr
 from tribeloc import ROOT, load_config
 from tribeloc.parcels import load as load_parcels
 from tribeloc.plotting import (DOMAIN_COLORS, DOMAIN_LABELS, DOMAINS, NETWORK_LABELS, NETWORK_TARGET, apply_style,
-                               bracket, save_fig, stars, style_axes)
+                               bracket, place_brackets, save_fig, stars, style_axes)
 
 OUT = ROOT / "plots"
 MAP_NETWORKS = {"Lan": "LANGUAGE_noAngG", "MD": "MD", "phys": "PHYSICS", "ToM": "TOM"}
@@ -159,11 +159,10 @@ def surface_maps(U, parcels, cortex, window):
     save_fig(fig, OUT / f"univariate_maps_{window}")
 
 
-def network_panel(ax, s, per_task, net, lo, hi, rng, n_brackets=3, title=True):
+def network_panel(ax, s, per_task, net, lo, hi, rng, title=True):
     """Bars: one parcel set's response to the four task domains (mean over tasks ± SEM, dots = tasks);
     brackets: target domain vs each other domain (one-sided task-label permutation p)."""
     target = NETWORK_TARGET[net]
-    step = .08 * (hi - lo)
     for x, d in enumerate(DOMAINS):
         m, e = s[f"mean_{d}"], s[f"sem_{d}"]
         ax.bar(x, m, width=.7, color=DOMAIN_COLORS[d], alpha=.35 if d != target else .6,
@@ -172,15 +171,18 @@ def network_panel(ax, s, per_task, net, lo, hi, rng, n_brackets=3, title=True):
         v = per_task[per_task.domain == d].response.to_numpy()
         ax.scatter(x + rng.uniform(-.18, .18, len(v)), v, s=9, color=DOMAIN_COLORS[d], edgecolor="black",
                    linewidth=.3, alpha=DOT_ALPHA[d == target], zorder=3)
-    others = sorted([d for d in DOMAINS if d != target], key=lambda d: abs(DOMAINS.index(d) - DOMAINS.index(target)))
-    for k, d in enumerate(others):
-        bracket(ax, DOMAINS.index(target), DOMAINS.index(d), hi + step * (.6 + 1.5 * k), step * .3,
-                stars(s[f"p_vs_{d}"]), fontsize=7)
-    ax.set_ylim(lo - .05 * (hi - lo), hi + step * (.6 + 1.5 * n_brackets))
+    others = [d for d in DOMAINS if d != target]
+    tops = [s[f"mean_{d}"] + s[f"sem_{d}"] for d in DOMAINS]
+    pairs = [(DOMAINS.index(target), DOMAINS.index(d)) for d in others]
+    ys, top = place_brackets(tops, pairs, hi - lo)
+    for (x1, x2), y, d in zip(pairs, ys, others):
+        bracket(ax, x1, x2, y, .025 * (hi - lo), stars(s[f"p_vs_{d}"]), fontsize=7)
+    ax.set_ylim(lo - .05 * (hi - lo), max(top, hi + .03 * (hi - lo)))
     ax.set_xticks(range(4), [DOMAIN_LABELS[d] for d in DOMAINS], rotation=30, ha="right", fontsize=10)
     if title:
         ax.set_title(f"{NETWORK_LABELS[net]} parcels", fontsize=11, weight="bold")
     style_axes(ax)
+    return ax.get_ylim()
 
 
 def network_bars(stats, responses, selection, window):
@@ -189,9 +191,11 @@ def network_bars(stats, responses, selection, window):
     sub = responses[(responses.selection == selection) & (responses.window == window)]
     per_all = sub.groupby(["network", "task", "domain"], sort=False).response.mean().reset_index()
     lo, hi = min(0, per_all.response.min()), per_all.response.max()
+    lims = []
     for ax, net in zip(axes, BAR_NETWORKS):
         s = stats[(stats.network == net) & (stats.selection == selection) & (stats.window == window)].iloc[0]
-        network_panel(ax, s, per_all[per_all.network == net], net, lo, hi, rng)
+        lims.append(network_panel(ax, s, per_all[per_all.network == net], net, lo, hi, rng))
+    axes[0].set_ylim(lims[0][0], max(l[1] for l in lims))
     axes[0].set_ylabel(Z, fontsize=12, labelpad=8)
     fig.tight_layout(w_pad=1.5)
     save_fig(fig, OUT / f"network_bars_{selection}_{window}")
@@ -271,7 +275,6 @@ def domain_panel(ax, s, per_task, d, measure, lo, hi, rng, title=True):
     if lo is None:
         v = per_task[per_task.domain == d].value
         lo, hi = min(0, v.min()), v.max()
-    step = .08 * (hi - lo)
     tgt = s.target_network.iloc[0]
     col = f"mean_{measure}"
     for x, net in enumerate(BAR_NETWORKS):
@@ -284,16 +287,19 @@ def domain_panel(ax, s, per_task, d, measure, lo, hi, rng, title=True):
                    edgecolor="black", linewidth=.3, alpha=DOT_ALPHA[is_t], zorder=3)
     pcol = "p_target_gt_this" if measure == "selectivity" else "p_resp_target_gt_this"
     ti = BAR_NETWORKS.index(tgt)
-    others = sorted([n for n in BAR_NETWORKS if n != tgt], key=lambda n: abs(BAR_NETWORKS.index(n) - ti))
-    for k, n in enumerate(others):
-        bracket(ax, ti, BAR_NETWORKS.index(n), hi + step * (.6 + 1.5 * k), step * .3, stars(s.loc[n, pcol]), fontsize=7)
-    n_br = len(others)
+    others = [n for n in BAR_NETWORKS if n != tgt]
+    tops = [s.loc[n, col] + s.loc[n, f"sem_{measure}"] for n in BAR_NETWORKS]
+    pairs = [(ti, BAR_NETWORKS.index(n)) for n in others]
+    ys, top = place_brackets(tops, pairs, hi - lo)
+    for (x1, x2), y, n in zip(pairs, ys, others):
+        bracket(ax, x1, x2, y, .025 * (hi - lo), stars(s.loc[n, pcol]), fontsize=7)
     ax.axhline(0, color="black", lw=.8, zorder=1)
-    ax.set_ylim(lo - .05 * (hi - lo), hi + step * (.6 + 1.5 * n_br) + .3 * step)
+    ax.set_ylim(lo - .05 * (hi - lo), max(top, hi + .03 * (hi - lo)))
     ax.set_xticks(range(len(BAR_NETWORKS)), [NETWORK_LABELS[n] for n in BAR_NETWORKS], rotation=30, ha="right", fontsize=10)
     if title:
         ax.set_title(f"{DOMAIN_LABELS[d]} tasks", fontsize=11, weight="bold", color=DOMAIN_COLORS[d])
     style_axes(ax)
+    return ax.get_ylim()
 
 
 SEL_LABEL = "Selectivity, predicted BOLD (z)\n(domain − other domains)"
@@ -305,9 +311,11 @@ def domain_bars(dstats, selection, window, measure):
     fig, axes = plt.subplots(1, len(DOMAINS), figsize=(8.8 * .85, 3.4 * .85 * TALL), sharey=True)
     rng = np.random.default_rng(0)
     lo, hi = min(0, per_task.value.min()), per_task.value.max()
+    lims = []
     for ax, d in zip(axes, DOMAINS):
         s = dstats[(dstats.domain == d) & (dstats.selection == selection) & (dstats.window == window)].set_index("network")
-        domain_panel(ax, s, per_task, d, measure, lo, hi, rng)
+        lims.append(domain_panel(ax, s, per_task, d, measure, lo, hi, rng))
+    axes[0].set_ylim(lims[0][0], max(l[1] for l in lims))
     axes[0].set_ylabel(SEL_LABEL if measure == "selectivity" else Z, fontsize=11, labelpad=6)
     fig.supxlabel("Parcels", fontsize=11, y=.02)
     fig.tight_layout(w_pad=1.2)

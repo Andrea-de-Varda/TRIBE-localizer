@@ -125,3 +125,16 @@ def test_paired_signflip_exact_and_sampled():
     assert p > .3
     _, p = paired_signflip(np.full(20, .5) + rng.normal(0, .1, 20), 10000, rng)   # sampled (2^20 > n_perm)
     assert p < .001
+
+
+def test_place_brackets_shortest_first_and_not_pushed_by_unspanned_bars():
+    from tribeloc.plotting import place_brackets
+    tops = [0.30, 0.0, 0.10, 0.05]                     # tall bar 0; target is bar 2
+    ys, top = place_brackets(tops, [(2, 0), (2, 1), (2, 3)], 1.0)
+    # 2-1 is shortest-first and does not reach bar 0, so it sits just above bar 2 (0.10), below bar 0;
+    # 2-3 shares bar 2 with it, so it stacks one level higher (above 2-1's label: .15 + .025 + .09, plus the gap)
+    assert ys[1] == pytest.approx(.15)
+    assert ys[2] == pytest.approx(.15 + .025 + .09 + .05)
+    # 2-0 spans bar 0 and overlaps the 2-1 bracket: above both
+    assert ys[0] > .30 and ys[0] > ys[1]
+    assert top > ys[0]

@@ -39,3 +39,22 @@ def save_fig(fig, path_stem, dpi=300):
     fig.savefig(f"{path_stem}.svg", format="svg", bbox_inches="tight")
     fig.savefig(f"{path_stem}.png", dpi=dpi, bbox_inches="tight")
     plt.close(fig)
+
+
+def place_brackets(tops, pairs, scale):
+    """Heights for significance brackets. tops: top of each bar's error bar (index = x); pairs: [(x1, x2), ...];
+    scale: data range used for spacing. Brackets are placed shortest first; each sits just above the bars it
+    spans and above every already-placed bracket whose span overlaps it, so a long bracket is not pushed up by a
+    tall bar it does not reach. Returns the bracket heights (in input order) and the top of the highest label."""
+    gap, h, label = .05 * scale, .025 * scale, .09 * scale
+    order = sorted(range(len(pairs)), key=lambda i: abs(pairs[i][1] - pairs[i][0]))
+    ys, placed = [None] * len(pairs), []
+    for i in order:
+        a, b = sorted(pairs[i])
+        base = max(tops[a:b + 1])
+        for (pa, pb), y in placed:
+            if pa <= b and a <= pb:              # spans overlap (sharing an end bar counts)
+                base = max(base, y + h + label)
+        ys[i] = base + gap
+        placed.append(((a, b), ys[i]))
+    return ys, max(y + h + label for y in ys) if ys else max(tops)
