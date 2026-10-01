@@ -1,5 +1,4 @@
-"""Group-level statistics on vertex maps: domain combination, univariate contrasts,
-held-out parcel fROIs and spin tests."""
+"""Group-level statistics on vertex maps: domain contrasts, parcel-level tests and spin tests."""
 import numpy as np
 import pandas as pd
 from scipy.spatial import cKDTree
@@ -40,31 +39,6 @@ def top_vertices(values, vertices, fraction):
     """The ceil(fraction * n) vertices with the largest values (stable order)."""
     k = max(1, int(np.ceil(fraction * len(vertices))))
     return vertices[np.argsort(values[vertices], kind="stable")[-k:]]
-
-
-def heldout_froi(map_h1, map_h2, vertices, fraction):
-    """Select the top vertices on one half, evaluate the mean on the other, both directions, averaged."""
-    a = map_h2[top_vertices(map_h1, vertices, fraction)].mean()
-    b = map_h1[top_vertices(map_h2, vertices, fraction)].mean()
-    return (a + b) / 2
-
-
-def parcel_table(results, tasks, parcels, audit, cortex, fraction):
-    """Held-out fROI and whole-parcel crossnobis for every task x parcel.
-
-    results: dict task -> npz-like with 'crossnobis_h1', 'crossnobis_h2', 'crossnobis' (full vertex maps)
-    tasks: DataFrame with task, domain; parcels: network -> labels; audit: parcel table.
-    """
-    rows = []
-    for p in audit.itertuples():
-        vertices = np.flatnonzero((parcels[p.network] == p.label) & cortex)
-        for t in tasks.itertuples():
-            r = results[t.task]
-            rows.append(dict(network=p.network, parcel=p.name, hemisphere=p.hemisphere, n_vertices=len(vertices),
-                             task=t.task, domain=t.domain,
-                             froi_heldout=heldout_froi(r["crossnobis_h1"], r["crossnobis_h2"], vertices, fraction),
-                             whole_parcel=float(np.nanmean(r["crossnobis"][vertices]))))
-    return pd.DataFrame(rows)
 
 
 def random_rotations(n, rng):
@@ -140,19 +114,6 @@ def pairwise_permutation(values, domains, target, other, n_perm, rng):
     obs = diff(d)
     null = np.array([diff(rng.permutation(d)) for _ in range(n_perm)])
     return obs, (1 + (null >= obs).sum()) / (1 + n_perm)
-
-
-def froi_responses(maps_h1, maps_h2, domains, vertices, target, fraction):
-    """Held-out fROI responses per task (n_tasks,): select the top `fraction` of `vertices` by the target
-    domain's contrast (target minus the mean of the other domain means) in one item half, average every
-    task's response over them in the other half, then swap halves and average."""
-    i = DOMAINS.index(target)
-    out = []
-    for sel, ev in [(maps_h1, maps_h2), (maps_h2, maps_h1)]:
-        contrast = domain_contrast(sel[:, vertices], domains)[i]
-        chosen = vertices[np.argsort(contrast, kind="stable")[-max(1, int(np.ceil(fraction * len(vertices)))):]]
-        out.append(ev[:, chosen].mean(1))
-    return np.mean(out, axis=0)
 
 
 def task_selectivity(values, domains):

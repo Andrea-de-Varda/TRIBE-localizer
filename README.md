@@ -9,15 +9,12 @@ This README is the running record of every decision, for the methods section. En
 - [x] Old pilot removed (2026-09-30)
 - [x] Stimulus table built and tested (2026-09-30): 45,542 items, 182,168 stimuli
 - [x] Parcels projected to fsaverage5 (2026-09-30)
-- [x] Inference code and Slurm scripts written, helpers tested (2026-09-30)
-- [x] TRIBE throughput benchmark on Engaging (2026-09-30, job 24506323)
-- [x] Full TRIBE inference (2026-10-01, array job 24508074; 183/183 shards, no errors)
+- [x] TRIBE benchmark (2026-09-30, job 24506323) and full inference (2026-10-01, array job 24508074; 183/183 shards)
 - [x] Shard quality check (2026-10-01)
-- [x] Searchlight, univariate, parcel-summary and spin-test code written and tested on synthetic data (2026-09-30)
-- [x] Searchlight crossnobis and classification, univariate contrasts, parcel summaries, spin tests: round 1 (2026-10-01; see Results)
-- [x] Decision (2026-10-01): univariate analysis is the main result; multivariate not reported
-- [x] Univariate parcel summaries, spin tests and figures (whole parcel) (2026-10-01)
-- [ ] Held-out univariate fROIs (needs `06_univariate.py` re-run for item-half maps)
+- [x] Univariate domain contrasts, whole-parcel summaries, spin tests, figures (2026-10-01)
+- [x] Multivariate analysis dropped and removed (2026-10-01)
+- [ ] Text localizers (language, MD, ToM, physics): stimuli, TRIBE inference, fROI definition
+- [ ] fROI-based bar plots
 
 ## Repository layout
 
@@ -27,12 +24,13 @@ data/parcels/            original MNI parcel NIfTIs + label tables (see data/par
 data/parcels/fsaverage5/ projected parcels + cortex mask (npz) and projection audit (csv)
 data/stimuli/            stimulus table (one row per stimulus) and per-task summary
 data/external/           pinned clone of LLM_Modularity (git-ignored, re-created by script)
-src/tribeloc/            library: stimuli.py, parcels.py, inference.py, data.py, surface.py, rsa.py, group.py, plotting.py
-scripts/                 numbered pipeline steps (04, 05, 07: multivariate, not reported)
-plots/                   figures (SVG with editable text + PNG)
-slurm/                   Engaging environment setup, benchmark and array jobs
+src/tribeloc/            library: stimuli, parcels, inference, group (statistics), surface (spin-test sphere), plotting
+scripts/                 numbered pipeline steps
+slurm/                   Engaging environment setup and jobs
 tests/                   pytest
-results/                 outputs (git-ignored)
+results/analysis/        small derived results (tracked); results/tribe/ holds the shards (cluster only, git-ignored)
+plots/                   figures (SVG with editable text + PNG)
+logs/                    Slurm logs (tracked)
 ```
 
 ## How to run
@@ -63,11 +61,11 @@ Then the analysis (CPU), and push the small results back:
 
 ```bash
 sbatch slurm/qc.sbatch            # shard quality check -> results/analysis/qc/
-sbatch slurm/post.sbatch          # univariate (main): 06 maps, 08 parcel summaries + spin tests, 09 figures -> plots/
+sbatch slurm/post.sbatch          # 06 univariate maps, 08 parcel summaries + spin tests, 09 figures -> plots/
 git add results/analysis plots logs && git commit -m "Analysis results" && git push
 ```
 
-The multivariate searchlight (`slurm/searchlight.sbatch`, scripts 04, 05, 07) is kept for future work but is not part of the reported analysis (see the decision log, 2026-10-01).
+Steps 08 and 09 need only `results/analysis/univariate.npz` and also run locally.
 
 Each shard is saved as `results/tribe/shards/shard_NNNN.npz` (`stim_id` plus one float32 stimulus × 20,484 array per window). Shards already present are skipped, so failed array tasks can simply be resubmitted.
 
@@ -94,19 +92,16 @@ Conclusion: task-demand localizers cannot be simulated in a stimulus-only encodi
 
 **Mean words per stimulus by domain** (descriptive; no length covariate): Lan 5.9, MD 21.6, phys 47.7, ToM 36.8.
 
-**Halves.** Within each task, items are randomly split in two halves (seed 20260930 with the task index; first ⌊n/2⌋ of a permutation → half 1). All four stimuli of an item are in the same half.
+**Halves** (used only by the abandoned multivariate analysis; the column is kept so the inference input is unchanged). Within each task, items are randomly split in two halves (seed 20260930 with the task index; first ⌊n/2⌋ of a permutation → half 1). All four stimuli of an item are in the same half.
 
 **Analysis windows** (decision: Andrea; fixed before inference because only window means are stored). `answer`: answer onset → +6 s (multivariate, main). `full`: stimulus onset → stimulus end (univariate, the pilot's convention). `full_tail`: stimulus onset → stimulus end + 4 s (sensitivity). TRIBE's output is at 1 Hz and already shifted 5 s to compensate for haemodynamic lag (checkpoint config `neuro.offset: 5.0`); no further lag is added. A window includes output samples t with lo ≤ t < hi.
 
 **TRIBE inference.** TRIBE v2 (github.com/facebookresearch/tribev2 at commit `af58661791a351a448a489042a28f6c37e1c14b7`; checkpoint `facebook/tribev2` from Hugging Face). Text pathway only (`features_to_use: [text]`): word features from Llama-3.2-3B, contextualized, with each word's context being the stimulus text up to and including that word. Each stimulus is an isolated 100-s timeline with onset at 10 s, as in the pilot; TRIBE cuts one 100-TR segment per timeline (checkpoint `duration_trs: 100`), so shortening timelines would not save compute. Words are presented every 0.5 s (longest stimulus: number_sorting, 77 words, ending at 48.5 s). No zero-feature baseline is computed: decoding and between-domain contrasts do not need it. Inference runs in 183 shards of about 1,000 stimuli, each holding whole items, with a fresh node-local feature cache deleted after each shard (TRIBE caches 20 Llama layers per word, about 245 KB per word; total 5.16M words).
 
-**Multivariate measure (main).** Whole-cortex surface searchlight; at every cortical vertex, discriminate correct from incorrect stimuli of a task. Primary measure: cross-validated Mahalanobis (crossnobis) distance between correct and incorrect patterns, using all items. Secondary: cross-validated classification accuracy with the number of items matched across tasks (repeated random subsamples). Cross-validation folds keep all four stimuli of an item together. Per task, then averaged within domain; leave-one-task-out cross-task decoding within domain as a secondary analysis. Parcels play no role in computing the maps, so their correspondence with the parcels can be tested afterwards (decision: Andrea).
+**Multivariate measure (abandoned 2026-10-01; code removed).** The original main analysis was a whole-cortex surface searchlight (10-mm geodesic discs) measuring the crossnobis distance between correct and incorrect completions of each item's 2×2 (correct-minus-incorrect difference, Ledoit–Wolf whitening, sign-flip permutation null with max-statistic FWE), plus matched-N shrinkage-LDA classification. It was validated on synthetic data with a planted effect. On the real predictions it did not localize (see Results, Round 1), and Andrea decided not to report it. The code was removed from the repository after commit `a4f9b56`, where it can still be found (scripts 04, 05, 07; `src/tribeloc/rsa.py`).
 
-**Searchlight implementation** (2026-09-30). Searchlights: for every cortical vertex, the cortical vertices of the same hemisphere within 10 mm, with distance measured along the edges of the fsaverage5 midthickness mesh (mean of white and pial coordinates; edge paths slightly overestimate true geodesic distance). Median 38 vertices per searchlight (range 11–86). Window: `answer`. For each item, d = (clean+A + corrupted+B − clean+B − corrupted+A)/2, the correct-minus-incorrect difference, which cancels item, problem and answer identity. Within a searchlight, the d vectors are whitened by the Ledoit–Wolf-shrunk uncentred second moment of d (Ledoit & Wolf, 2004, J. Multivariate Anal. 88:365–411), and the crossnobis distance is the mean inner product of whitened d over all pairs of distinct items, divided by the number of vertices. This is the leave-one-item-out cross-validated Mahalanobis distance (Walther et al., 2016, NeuroImage 137:188–200), with expectation 0 when correct and incorrect stimuli do not differ; the searchlight approach follows Kriegeskorte, Goebel & Bandettini (2006, PNAS 103:3863–3868). Because "noise" in a deterministic model is item-to-item variability, the effect is whitened by its own item-level variability; the uncentred moment makes the whitening identical under the permutation null. Null: swapping the correct/incorrect labels within an item flips the sign of its d exactly, so 1,000 random per-item sign-flip patterns (shared across vertices within a task) give a permutation null; family-wise error is controlled with the maximum statistic over cortical vertices (Nichols & Holmes, 2002, Hum. Brain Mapp. 15:1–25). Domain maps are the mean of task maps; their null averages task null maps permutation by permutation (flips independent across tasks). Each task is also analysed separately in its two item halves for the parcel analysis.
 
-**Validation of the searchlight code** (2026-09-30, synthetic data). Fake TRIBE predictions for npi (152 items; Gaussian noise, with a correctness effect planted in 200 vertices) were run through `04_searchlight.py`. All 139 FWE-significant searchlights contained planted vertices; none of the searchlights without planted vertices was significant. Crossnobis correlated 0.75 with the fraction of planted vertices in the searchlight. In searchlights without signal, accuracy averaged 0.499 and crossnobis −0.0001, about 0.04 null SDs below zero: estimating the whitening from the same items biases the distance slightly downwards, which is conservative, and the permutation test stays exact because every permutation uses the same whitening. Runtime for npi on one core: 12 s crossnobis, 8 min classification (about 175 µs per LDA fit, the same for every task because N is matched); peak memory 2 GB. The domain, parcel and spin-test scripts were run on per-task copies of this output; the spin null's mean enrichment was ≈1, as expected. All synthetic outputs were deleted.
 
-**Classification** (secondary). Shrinkage LDA (Ledoit–Wolf within-class covariance) on item-centred stimulus patterns (each item's four patterns minus their mean, which uses no label information), classifying correct vs incorrect stimuli; no bias term, since after centring the class means are ±d̄/2. 152 items per task (matched to the smallest task, npi), 20 random subsamples, 5 folds over items. Reported as the mean accuracy over subsamples.
 
 **Univariate measure.** At every vertex, a domain's mean response minus the mean of the other three domains, in the `full` window (`full_tail` as sensitivity). Task maps average all stimuli of a task (correct and incorrect); domain means weight tasks equally. Inference: the 46 task-to-domain labels are permuted 10,000 times; one-sided maximum-statistic FWE over cortical vertices. TRIBE outputs are compared between domains only, so no zero-input baseline is needed. No length covariate (decision: Andrea); mean word count per domain is reported descriptively.
 
@@ -116,7 +111,7 @@ Conclusion: task-demand localizers cannot be simulated in a stimulus-only encodi
 
 **Parcels on the surface.** Original MNI NIfTIs (checksums verified) projected to fsaverage5 with neuromaps 0.0.7 registration fusion (`mni152_to_fsaverage`, `fsavg_density='10k'`, nearest neighbour). Vertex counts match the pilot's projection exactly. Every parcel projects onto cortex. Nine vertices of PHYSICS lSPL fell in the right hemisphere (midline voxels) and are removed so each parcel stays in its own hemisphere. Cortex mask: Destrieux fsaverage5 labels excluding Unknown and Medial_wall (18,715 of 20,484 vertices). Audit: `data/parcels/fsaverage5/projection_audit.csv`.
 
-**Parcel summaries.** All parcels kept; probability atlases (LanA etc.) dropped. Physics is analysed with both parcel sets, `PHYSICS_Kean` and `PHYSICS`. Peak decodability per parcel: items are split into two random halves per task (seeded); the top 10% of searchlight centres within each parcel (rounded up) are selected on one half's crossnobis map and their mean crossnobis distance is evaluated on the other half's map, then the halves are swapped and averaged. This is done per task and parcel; network values average parcels equally, domain values average tasks equally, and the SEM is across tasks. The whole-parcel mean (no selection, all items) is reported alongside. Item split chosen over a clean/corrupted split because each half keeps the full balanced 2×2 and the halves share no strings (decision: Andrea). Whole-brain maps for display use all data.
+**Parcel summaries.** All parcels kept; probability atlases (LanA etc.) dropped. Physics was first analysed with both parcel sets, `PHYSICS` and `PHYSICS_Kean`; from 2026-10-01 only `PHYSICS` is used (decision: Andrea). Peak decodability per parcel: items are split into two random halves per task (seeded); the top 10% of searchlight centres within each parcel (rounded up) are selected on one half's crossnobis map and their mean crossnobis distance is evaluated on the other half's map, then the halves are swapped and averaged. This is done per task and parcel; network values average parcels equally, domain values average tasks equally, and the SEM is across tasks. The whole-parcel mean (no selection, all items) is reported alongside. Item split chosen over a clean/corrupted split because each half keeps the full balanced 2×2 and the halves share no strings (decision: Andrea). Whole-brain maps for display use all data.
 
 **Correspondence with the parcels** (decision: Andrea). Overlap between each domain's whole-cortex map and that network's parcels is tested against a spin-test null (Alexander-Bloch et al., 2018, NeuroImage 178:540–551): 1,000 random rotations of the fsaverage5 sphere, the right hemisphere rotated by the mirror image of the left rotation; each vertex takes the value of the vertex nearest its inverse-rotated position, and medial-wall values rotated into cortex are dropped. Statistic: the fraction of the top 10% of cortical vertices of a domain's crossnobis map that fall in a network's parcels (enrichment = this fraction divided by the network's share of cortex); one-sided p = (1 + #rotations with overlap ≥ observed) / 1,001. All five parcel sets are tested against all four domain maps.
 
@@ -153,3 +148,10 @@ Conclusion: task-demand localizers cannot be simulated in a stimulus-only encodi
 `domain_bars_selectivity_<selection>_<window>` (main) and `domain_bars_response_<selection>_<window>` (raw). One panel per task domain; bars = the five parcel sets. Raw responses are not comparable across parcel sets, because the language parcels respond about 4× more than the others to every domain (about 0.2 vs 0.05). The main version therefore plots selectivity: for each task, its response in a parcel set minus that set's mean response to the other three domains (domains weighted equally, tasks equally within domain). This is the per-task version of the network contrast above (averaging over a domain's tasks gives the same number), and a constant offset of a parcel set cancels. Test: target parcel set against each other set, one-sided paired sign-flip across the domain's tasks (exact for Language, Physics and Social, 8–9 tasks, minimum p = 1/256 or 1/512; 10,000 random flips for Formal, 20 tasks); uncorrected. Physics: PHYSICS is the target set, with PHYSICS_Kean shown but not tested against it. Stats: `results/analysis/univariate/domain_stats.csv`; per-task selectivity: `task_selectivity_<selection>_<window>.csv`.
 
 Results (`full`, whole parcels; selectivity, target set first): Formal tasks: MD +0.042 > Language +0.001 (p = .022), ToM −0.035, Physics −0.028, Physics (Kean) −0.011 (all p < .001). Physics tasks: Physics +0.087, Kean +0.069 > Language +0.004, MD +0.003, ToM −0.028 (all p = .002, the exact minimum). Social tasks: ToM +0.047 > MD, Physics, Kean (all p = .002), but not > Language parcels (+0.052, p = .81). Language tasks: Language parcels −0.056, the least selective set (length confound). `full_tail`: the same, except MD vs Language parcels for Formal tasks becomes p = .065.
+
+### 2026-10-01 — Clean-up and figure conventions (Andrea)
+
+- Multivariate analysis removed from the repository (see the note in the design section).
+- `PHYSICS_Kean` dropped for good: one physics parcel set (`PHYSICS`) only. The NIfTI stays in `data/parcels/` as part of the original parcel bundle, but it is no longer projected or analysed. Projections of the other sets are unchanged.
+- Figures: no figure titles (panel labels only); bar plots 40% taller, with one shared y-axis per figure; axes and colour bars labelled in TRIBE's units. **Units:** TRIBE was trained on BOLD that was detrended and z-scored per vertex and run (checkpoint config `neuro.cleaning: standardize: zscore_sample, detrend: true`). Predictions are therefore in z units, i.e. standard deviations of the vertex's training signal, not % signal change, and 0 is the vertex's mean during naturalistic stimulation, not fixation. Labels: "Predicted BOLD (z)"; maps "Δ predicted BOLD (z)".
+- The held-out item-half fROI analysis (planned but never run) is dropped. fROIs will be defined with independent text localizers instead.

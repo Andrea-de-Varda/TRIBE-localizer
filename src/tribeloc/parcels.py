@@ -23,8 +23,6 @@ def cortex_mask():
 
 def label_table(labels_tsv, network):
     t = pd.read_csv(labels_tsv, sep="\t")
-    if "name" not in t.columns:
-        t["name"] = [f"Kean_{x}" for x in t.label]
     t.insert(0, "network", network)
     return t[["network", "label", "name", "hemisphere", "n_voxels"]]
 

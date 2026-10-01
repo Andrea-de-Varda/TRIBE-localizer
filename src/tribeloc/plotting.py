@@ -7,9 +7,8 @@ DOMAINS = ["Lan", "MD", "phys", "ToM"]
 # Same names and colors as the LLM-modularity paper (scripts/plot_layer_stacked.py there).
 DOMAIN_LABELS = {"Lan": "Language", "MD": "Formal", "phys": "Physics", "ToM": "Social"}
 DOMAIN_COLORS = {"Lan": "#C0392B", "MD": "#2471A3", "phys": "#E67E22", "ToM": "#27AE60"}
-NETWORK_LABELS = {"LANGUAGE_noAngG": "Language", "MD": "MD", "TOM": "ToM", "PHYSICS": "Physics",
-                  "PHYSICS_Kean": "Physics (Kean)"}
-NETWORK_TARGET = {"LANGUAGE_noAngG": "Lan", "MD": "MD", "TOM": "ToM", "PHYSICS": "phys", "PHYSICS_Kean": "phys"}
+NETWORK_LABELS = {"LANGUAGE_noAngG": "Language", "MD": "MD", "TOM": "ToM", "PHYSICS": "Physics"}
+NETWORK_TARGET = {"LANGUAGE_noAngG": "Lan", "MD": "MD", "TOM": "ToM", "PHYSICS": "phys"}
 NS_FILL, NS_EDGE = "#cccccc", "#999999"
 
 

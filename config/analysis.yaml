@@ -11,10 +11,10 @@ stimuli:
   word_seconds: 0.5        # one whitespace word every 0.5 s
   onset_seconds: 10.0      # stimulus onset within each isolated timeline
   timeline_seconds: 100.0  # TRIBE cuts one 100-TR segment per timeline (checkpoint duration_trs = 100, TR = 1 s)
-  half_seed: 20260930      # item split into halves, per task
+  half_seed: 20260930      # item halves (column `half`); used only by the abandoned multivariate analysis
 
 windows:                   # seconds; TRIBE output already includes its 5 s haemodynamic offset
-  answer:    {anchor: answer_onset, start: 0.0, end: 6.0}   # multivariate (main)
+  answer:    {anchor: answer_onset, start: 0.0, end: 6.0}   # saved by inference, not analysed (was for the multivariate analysis)
   full:      {anchor: stimulus,     start: 0.0, end: 0.0}   # univariate: stimulus onset -> stimulus end
   full_tail: {anchor: stimulus,     start: 0.0, end: 4.0}   # sensitivity: stimulus onset -> stimulus end + 4 s
 
@@ -27,27 +27,13 @@ tribe:
   shard_size: 1000         # stimuli per shard; shards contain whole items
 
 parcels:
-  networks: [LANGUAGE_noAngG, MD, TOM, PHYSICS_Kean, PHYSICS]
+  networks: [LANGUAGE_noAngG, MD, TOM, PHYSICS]
   output: data/parcels/fsaverage5/parcels_fsaverage5.npz
   audit: data/parcels/fsaverage5/projection_audit.csv
 
 paths:
   shards: results/tribe/shards           # TRIBE window means (cluster only, git-ignored)
-  permutations: results/tribe/perm       # per-task permutation maps (cluster only, git-ignored)
   analysis: results/analysis             # small derived results (tracked, pushed from the cluster)
-
-searchlight:
-  window: answer
-  radius_mm: 10.0          # geodesic, along edges of the fsaverage5 midthickness mesh, same hemisphere, cortex only
-  n_permutations: 1000     # within-item sign flips, max-statistic FWE
-  seed: 20261001
-
-classification:
-  window: answer
-  n_items: 152             # matched across tasks = smallest task (npi)
-  n_repeats: 20            # random item subsamples
-  n_folds: 5               # folds over items
-  seed: 20261002
 
 univariate:
   windows: [full, full_tail]
@@ -55,14 +41,13 @@ univariate:
   seed: 20261003
 
 parcel_summary:
-  top_fraction: 0.10       # fROI = top 10% of vertices within a parcel, selected on the other item half
+  top_fraction: 0.10       # fROI = top 10% of vertices within a parcel by the independent localizer contrast
   n_permutations: 10000    # task-to-domain label permutations for the network x domain tests
   seed: 20261005
   targets:                 # the domain each parcel set is expected to prefer
     LANGUAGE_noAngG: Lan
     MD: MD
     TOM: ToM
-    PHYSICS_Kean: phys
     PHYSICS: phys
 
 spin:

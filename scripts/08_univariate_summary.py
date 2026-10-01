@@ -1,6 +1,6 @@
 """Univariate parcel summaries and spin tests (runs locally on results/analysis/univariate.npz).
 
-For every parcel set, window and selection (whole parcel; held-out fROI when item-half maps exist):
+For every parcel set and window (whole parcels):
 per-task responses averaged over parcels (equal weight), the target domain against the other three and
 against each other domain (task-label permutations), and spin tests of each domain contrast map against
 each parcel set. Transposed view (domain_stats.csv): for each domain, the selectivity of its tasks (task response
@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 
 from tribeloc import ROOT, load_config
-from tribeloc.group import (DOMAINS, froi_responses, paired_signflip, pairwise_permutation, spin_test, target_permutation,
+from tribeloc.group import (DOMAINS, paired_signflip, pairwise_permutation, spin_test, target_permutation,
                             task_selectivity)
 from tribeloc.parcels import load as load_parcels
 from tribeloc.surface import sphere_coords
@@ -31,16 +31,12 @@ def main():
 
     rows, stats = [], []
     for w in cfg["univariate"]["windows"]:
-        selections = ["whole_parcel"] + (["froi"] if f"task_means_{w}_h1" in U.files else [])
+        selections = ["whole_parcel"]
         for net, target in pc["targets"].items():
             parcel_list = audit[audit.network == net]
             vsets = [np.flatnonzero((parcels[net] == r.label) & cortex) for r in parcel_list.itertuples()]
             for sel in selections:
-                if sel == "whole_parcel":
-                    per_parcel = np.stack([U[f"task_means_{w}"][:, v].mean(1) for v in vsets])
-                else:
-                    per_parcel = np.stack([froi_responses(U[f"task_means_{w}_h1"], U[f"task_means_{w}_h2"], domains, v,
-                                                          target, pc["top_fraction"]) for v in vsets])
+                per_parcel = np.stack([U[f"task_means_{w}"][:, v].mean(1) for v in vsets])
                 for r, vals in zip(parcel_list.itertuples(), per_parcel):
                     rows += [dict(window=w, selection=sel, network=net, parcel=r.name, hemisphere=r.hemisphere,
                                   task=t, domain=d, response=float(x)) for t, d, x in zip(tasks.task, domains, vals)]
@@ -59,10 +55,7 @@ def main():
     pd.DataFrame(stats).to_csv(out / "network_stats.csv", index=False)
 
     # Transposed view: for each domain, which parcel set is most selective for it.
-    target_net = {}
-    for net, d in pc["targets"].items():
-        target_net.setdefault(d, net)                    # first listed set per domain (PHYSICS_Kean for phys)
-    target_net["phys"] = "PHYSICS"                       # the Casto set is primary for the domain view, Kean shown alongside
+    target_net = {d: net for net, d in pc["targets"].items()}
     dstats = []
     for (w, sel), r in responses.groupby(["window", "selection"], sort=False):
         per = r.groupby(["network", "task"], sort=False).response.mean().unstack("network")   # tasks x sets
