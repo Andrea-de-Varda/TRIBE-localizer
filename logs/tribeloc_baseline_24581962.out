@@ -1,0 +1,122 @@
+NO-INPUT BASELINE SAVED {"job": "24581962", "max_abs_difference_between_dummy_timelines": 0.0, "shape": [20484, 100], "times": [0.0, 99.0], "mean": 0.00034246660652570426, "sd_over_time": 0.021068641915917397}
+full Lan FWE p<.05 vertices: 84
+full MD FWE p<.05 vertices: 520
+full phys FWE p<.05 vertices: 707
+full ToM FWE p<.05 vertices: 535
+full_tail Lan FWE p<.05 vertices: 40
+full_tail MD FWE p<.05 vertices: 510
+full_tail phys FWE p<.05 vertices: 1131
+full_tail ToM FWE p<.05 vertices: 280
+                                  whole  heldout parcels_positive
+localizer       network                                          
+LANGUAGE_noAngG LANGUAGE_noAngG  0.0046   0.0565             8/10
+MD              MD              -0.0024   0.0036             7/20
+PHYSICS         PHYSICS         -0.0066  -0.0009             4/11
+PHYSICS_content PHYSICS          0.0354   0.0989            11/11
+TOM             TOM              0.0931   0.1385            10/10
+network          LANGUAGE_noAngG    MD  PHYSICS   TOM
+localizer                                            
+LANGUAGE_noAngG             2.66  0.24     0.23  2.67
+MD                          0.27  1.50     1.10  0.03
+PHYSICS                     0.23  0.12     0.27  1.58
+PHYSICS_content             2.06  0.77     1.21  3.60
+TOM                         3.55  0.14     0.25  4.42
+      network_a network_b  shared  n_a  dice
+LANGUAGE_noAngG        MD       0  173 0.000
+LANGUAGE_noAngG       TOM       7  173 0.038
+LANGUAGE_noAngG   PHYSICS       0  173 0.000
+             MD       TOM       0  422 0.000
+             MD   PHYSICS       4  422 0.013
+        PHYSICS       TOM       0  188 0.000
+full whole_parcel LANGUAGE_noAngG target Lan: effect -0.0500, p 0.9969
+full froi_task LANGUAGE_noAngG target Lan: effect -0.0515, p 0.9768
+full froi_content LANGUAGE_noAngG target Lan: effect -0.0515, p 0.9763
+full whole_parcel MD target MD: effect 0.0420, p 0.0009
+full froi_task MD target MD: effect 0.0766, p 0.0001
+full froi_content MD target MD: effect 0.0766, p 0.0001
+full whole_parcel TOM target ToM: effect 0.0485, p 0.0002
+full froi_task TOM target ToM: effect 0.0799, p 0.0001
+full froi_content TOM target ToM: effect 0.0799, p 0.0001
+full whole_parcel PHYSICS target phys: effect 0.0895, p 0.0001
+full froi_task PHYSICS target phys: effect 0.1010, p 0.0001
+full froi_content PHYSICS target phys: effect 0.1084, p 0.0001
+full_tail whole_parcel LANGUAGE_noAngG target Lan: effect -0.0497, p 0.9983
+full_tail froi_task LANGUAGE_noAngG target Lan: effect -0.0422, p 0.9681
+full_tail froi_content LANGUAGE_noAngG target Lan: effect -0.0422, p 0.9708
+full_tail whole_parcel MD target MD: effect 0.0353, p 0.0005
+full_tail froi_task MD target MD: effect 0.0624, p 0.0002
+full_tail froi_content MD target MD: effect 0.0624, p 0.0004
+full_tail whole_parcel TOM target ToM: effect 0.0439, p 0.0001
+full_tail froi_task TOM target ToM: effect 0.0693, p 0.0001
+full_tail froi_content TOM target ToM: effect 0.0693, p 0.0001
+full_tail whole_parcel PHYSICS target phys: effect 0.0924, p 0.0001
+full_tail froi_task PHYSICS target phys: effect 0.1014, p 0.0001
+full_tail froi_content PHYSICS target phys: effect 0.1037, p 0.0001
+   window    selection domain         network  target_network  mean_selectivity  sem_selectivity  mean_response  sem_response  diff_target_minus_this  p_target_gt_this  diff_resp_target_minus_this  p_resp_target_gt_this
+     full whole_parcel    Lan LANGUAGE_noAngG LANGUAGE_noAngG           -0.0500           0.0145         0.1603        0.0145                     NaN               NaN                          NaN                    NaN
+     full whole_parcel    Lan              MD LANGUAGE_noAngG           -0.0020           0.0041         0.0549        0.0041                 -0.0480            0.9883                       0.1054                 0.0039
+     full whole_parcel    Lan             TOM LANGUAGE_noAngG            0.0124           0.0067         0.0670        0.0067                 -0.0625            1.0000                       0.0933                 0.0039
+     full whole_parcel    Lan         PHYSICS LANGUAGE_noAngG           -0.0086           0.0042         0.0143        0.0042                 -0.0414            0.9766                       0.1460                 0.0039
+     full whole_parcel     MD LANGUAGE_noAngG              MD            0.0000           0.0124         0.1978        0.0124                  0.0420            0.0126                      -0.1098                 1.0000
+     full whole_parcel     MD              MD              MD            0.0420           0.0118         0.0880        0.0118                     NaN               NaN                          NaN                    NaN
+     full whole_parcel     MD             TOM              MD           -0.0325           0.0068         0.0332        0.0068                  0.0746            0.0001                       0.0547                 0.0003
+     full whole_parcel     MD         PHYSICS              MD           -0.0281           0.0100        -0.0003        0.0100                  0.0701            0.0001                       0.0883                 0.0001
+     full whole_parcel   phys LANGUAGE_noAngG         PHYSICS            0.0011           0.0075         0.1986        0.0075                  0.0885            0.0020                      -0.1107                 1.0000
+     full whole_parcel   phys              MD         PHYSICS            0.0113           0.0038         0.0649        0.0038                  0.0782            0.0020                       0.0230                 0.0078
+     full whole_parcel   phys             TOM         PHYSICS           -0.0284           0.0067         0.0364        0.0067                  0.1179            0.0020                       0.0515                 0.0078
+     full whole_parcel   phys         PHYSICS         PHYSICS            0.0895           0.0087         0.0879        0.0087                     NaN               NaN                          NaN                    NaN
+     full whole_parcel    ToM LANGUAGE_noAngG             TOM            0.0489           0.0116         0.2345        0.0116                 -0.0004            0.5488                      -0.1404                 1.0000
+     full whole_parcel    ToM              MD             TOM           -0.0513           0.0059         0.0180        0.0059                  0.0998            0.0020                       0.0761                 0.0020
+     full whole_parcel    ToM             TOM             TOM            0.0485           0.0091         0.0940        0.0091                     NaN               NaN                          NaN                    NaN
+     full whole_parcel    ToM         PHYSICS             TOM           -0.0528           0.0063        -0.0189        0.0063                  0.1013            0.0020                       0.1129                 0.0020
+full_tail whole_parcel    Lan LANGUAGE_noAngG LANGUAGE_noAngG           -0.0497           0.0116         0.1366        0.0116                     NaN               NaN                          NaN                    NaN
+full_tail whole_parcel    Lan              MD LANGUAGE_noAngG           -0.0257           0.0028         0.0408        0.0028                 -0.0240            0.9648                       0.0959                 0.0039
+full_tail whole_parcel    Lan             TOM LANGUAGE_noAngG            0.0024           0.0064         0.0649        0.0064                 -0.0521            1.0000                       0.0717                 0.0039
+full_tail whole_parcel    Lan         PHYSICS LANGUAGE_noAngG           -0.0293           0.0024         0.0142        0.0024                 -0.0204            0.9453                       0.1224                 0.0039
+full_tail whole_parcel     MD LANGUAGE_noAngG              MD            0.0124           0.0127         0.1832        0.0127                  0.0229            0.0549                      -0.0967                 1.0000
+full_tail whole_parcel     MD              MD              MD            0.0353           0.0101         0.0865        0.0101                     NaN               NaN                          NaN                    NaN
+full_tail whole_parcel     MD             TOM              MD           -0.0216           0.0070         0.0469        0.0070                  0.0569            0.0001                       0.0396                 0.0004
+full_tail whole_parcel     MD         PHYSICS              MD           -0.0220           0.0086         0.0197        0.0086                  0.0574            0.0001                       0.0668                 0.0001
+full_tail whole_parcel   phys LANGUAGE_noAngG         PHYSICS            0.0013           0.0067         0.1749        0.0067                  0.0911            0.0020                      -0.0693                 1.0000
+full_tail whole_parcel   phys              MD         PHYSICS            0.0229           0.0035         0.0772        0.0035                  0.0695            0.0020                       0.0284                 0.0039
+full_tail whole_parcel   phys             TOM         PHYSICS           -0.0247           0.0067         0.0445        0.0067                  0.1171            0.0020                       0.0610                 0.0020
+full_tail whole_parcel   phys         PHYSICS         PHYSICS            0.0924           0.0078         0.1056        0.0078                     NaN               NaN                          NaN                    NaN
+full_tail whole_parcel    ToM LANGUAGE_noAngG             TOM            0.0360           0.0121         0.2009        0.0121                  0.0079            0.0762                      -0.1048                 1.0000
+full_tail whole_parcel    ToM              MD             TOM           -0.0325           0.0061         0.0356        0.0061                  0.0764            0.0020                       0.0604                 0.0020
+full_tail whole_parcel    ToM             TOM             TOM            0.0439           0.0087         0.0960        0.0087                     NaN               NaN                          NaN                    NaN
+full_tail whole_parcel    ToM         PHYSICS             TOM           -0.0410           0.0062         0.0055        0.0062                  0.0849            0.0020                       0.0906                 0.0020
+   window domain         network  overlap  enrichment  null_mean_enrichment  p_spin
+     full    Lan LANGUAGE_noAngG   0.0011      0.0120                1.0228  0.9980
+     full    Lan              MD   0.1998      0.9058                0.9915  0.5634
+     full    Lan             TOM   0.1544      1.4908                1.0097  0.2298
+     full    Lan         PHYSICS   0.0395      0.4058                0.9665  0.7802
+     full     MD LANGUAGE_noAngG   0.0780      0.8725                0.9999  0.4655
+     full     MD              MD   0.6854      3.1072                0.9870  0.0010
+     full     MD             TOM   0.0577      0.5571                0.9724  0.6883
+     full     MD         PHYSICS   0.0791      0.8116                1.0102  0.5704
+     full   phys LANGUAGE_noAngG   0.0646      0.7231                0.9844  0.5994
+     full   phys              MD   0.4744      2.1506                0.9912  0.0020
+     full   phys             TOM   0.0791      0.7635                1.0129  0.6563
+     full   phys         PHYSICS   0.4076      4.1843                1.0622  0.0010
+     full    ToM LANGUAGE_noAngG   0.4455      4.9837                0.9703  0.0010
+     full    ToM              MD   0.0326      0.1477                1.0402  0.9950
+     full    ToM             TOM   0.3739      3.6110                1.0057  0.0060
+     full    ToM         PHYSICS   0.0166      0.1700                1.0759  0.9570
+full_tail    Lan LANGUAGE_noAngG   0.0021      0.0239                1.0209  0.9790
+full_tail    Lan              MD   0.1202      0.5449                0.9750  0.7323
+full_tail    Lan             TOM   0.1976      1.9087                1.0166  0.0919
+full_tail    Lan         PHYSICS   0.0283      0.2907                0.9147  0.7483
+full_tail     MD LANGUAGE_noAngG   0.1100      1.2310                0.9748  0.2987
+full_tail     MD              MD   0.6544      2.9667                0.9842  0.0020
+full_tail     MD             TOM   0.0657      0.6345                0.9629  0.6464
+full_tail     MD         PHYSICS   0.0769      0.7897                0.9733  0.5704
+full_tail   phys LANGUAGE_noAngG   0.0582      0.6514                0.9546  0.6354
+full_tail   phys              MD   0.4968      2.2523                0.9921  0.0010
+full_tail   phys             TOM   0.0721      0.6964                1.0178  0.7113
+full_tail   phys         PHYSICS   0.4225      4.3378                1.0477  0.0010
+full_tail    ToM LANGUAGE_noAngG   0.3729      4.1710                0.9741  0.0010
+full_tail    ToM              MD   0.0337      0.1526                1.0077  1.0000
+full_tail    ToM             TOM   0.3649      3.5233                0.9924  0.0030
+full_tail    ToM         PHYSICS   0.0128      0.1316                1.0147  0.9930
+figures done: full
+figures done: full_tail
