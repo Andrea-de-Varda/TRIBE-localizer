@@ -15,6 +15,7 @@ This README is the running record of every decision, for the methods section. En
 - [x] Multivariate analysis dropped and removed (2026-10-01)
 - [x] Text localizer stimuli built and tested; fROI pipeline tested on synthetic data (2026-10-01)
 - [x] Localizer inference (2026-10-01, Engaging job 24570531), fROIs, fROI-based bar plots
+- [ ] No-input baseline and baseline-subtracted re-analysis (`slurm/baseline.sbatch`)
 
 ## Repository layout
 
@@ -68,6 +69,13 @@ git add results/analysis plots logs && git commit -m "Analysis results" && git p
 ```
 
 Steps 08 and 09 need only `results/analysis/univariate.npz` and also run locally.
+
+No-input baseline (one GPU job; then re-runs 06, 11, 08 and 09 with baseline subtraction on the same node):
+
+```bash
+sbatch slurm/baseline.sbatch
+git add results/analysis plots logs && git commit -m "Baseline results" && git push
+```
 
 Localizers (one GPU job; also runs 11, 08 and 09 on the same node):
 
@@ -225,3 +233,11 @@ Supersedes the previous figure entry where they differ.
 - Third version restored (decision: Andrea): `main_figure_network_froi_content_<window>`, the same panel A with, next to each map, the target network's fROI response to the four task domains (brackets: target domain vs each other domain, one-sided task-label permutation p); per-row y-axes. All three versions are kept.
 - Task dots now take the colour of their bar and its opacity level: strong on the target bar, faded on the others (all bar figures).
 - Significance brackets are placed relative to the error-bar tops (mean + SEM), not the highest task dot, and stacked shortest first: each sits just above the bars it spans and above any overlapping bracket already placed (`place_brackets` in `src/tribeloc/plotting.py`). Dots may extend above a bracket. Saves vertical space for the bars.
+
+### 2026-10-01 — Response baseline (Andrea)
+
+**Problem.** TRIBE was trained on BOLD detrended and z-scored per vertex and run, in continuous naturalistic stimulation with no rest or fixation periods. A raw prediction is therefore in SD units of the vertex's training signal, with 0 = the vertex's mean during naturalistic stimulation. Contrasts between conditions do not need a baseline (any common reference cancels), but raw response values had no meaningful zero: a negative bar did not mean deactivation, and bar heights were not comparable with the % signal change vs fixation of human fROI studies.
+
+**Baseline.** The no-input prediction: TRIBE's output when all text features are zero, which is what the model receives at every time point without a word (the zero-feature reference also used in the collaborator's pilot). With zero features every timeline is identical (same average subject, same 100-s segment), so the baseline depends only on time within the segment. One prediction gives its time course (`12_baseline.py`; check: two dummy timelines with different words must give identical predictions). Each stimulus's baseline is that time course averaged over the stimulus's own analysis window (onset 10 s to the stimulus end, or end + 4 s), and is subtracted from the stimulus's response before any analysis: task maps (06) and localizer responses (11). It depends on window length, so it differs slightly between stimuli of different lengths. This is the computational counterpart of a no-stimulus baseline, not human rest. Axes: "Predicted BOLD (z) vs no-input baseline". Raw task means are kept (`task_means_raw_<window>` in `univariate.npz`).
+
+**Caveat on comparing raw responses across networks** (to state in the paper). Predicted amplitude also scales with how well TRIBE predicts a vertex: poorly predicted vertices have predictions shrunk towards 0. The language network is predicted best from text, which plausibly contributes to its larger responses to all tasks. Inferences should therefore rest on comparisons within a network (across task domains) or on selectivity, not on raw response levels across networks.

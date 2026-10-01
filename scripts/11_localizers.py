@@ -16,6 +16,7 @@ import numpy as np
 import pandas as pd
 
 from tribeloc import ROOT, load_config
+from tribeloc.baseline import stimulus_baselines
 from tribeloc.froi import define_frois, heldout_effect, localizer_t
 from tribeloc.group import spin_test
 from tribeloc.inference import N_VERTICES, assign_shards
@@ -42,6 +43,10 @@ def main():
     table = pd.read_csv(ROOT / lc["output"])
     parcels, cortex, audit = load_parcels(ROOT / cfg["parcels"]["output"], ROOT / cfg["parcels"]["audit"])
     X = load_localizer_predictions(table, lc["windows"], ROOT / lc["shards"], cfg["tribe"]["shard_size"])
+    if cfg["baseline"]["subtract"]:                                 # relative to the window-matched no-input baseline
+        z = np.load(ROOT / cfg["baseline"]["path"])
+        base = stimulus_baselines(table, z["timecourse"], z["times"], {w: cfg["windows"][w] for w in lc["windows"]})
+        X = {w: (x - base[w]).astype(np.float32) for w, x in X.items()}
     out = ROOT / cfg["paths"]["analysis"] / "localizers"
     out.mkdir(parents=True, exist_ok=True)
 

@@ -5,7 +5,8 @@
   domain_bars_<sel>     transposed: for each task domain, the selectivity of each parcel set for it (and the raw response)
 
 Units: TRIBE was trained on BOLD detrended and z-scored per vertex and run, so predictions are in z units
-(SDs of the training signal; 0 = the vertex's mean during naturalistic stimulation, not fixation).
+(SDs of the training signal). Responses are relative to the window-matched no-input baseline (TRIBE's
+prediction with zero text features), the computational counterpart of a no-stimulus baseline, not human rest.
   enrichment            overlap of each domain map's top 10% with each parcel set, with spin-test significance
   length_language       language-parcel response vs stimulus length across the 46 tasks (the Language confound)
   main_figure_<measure> A: contrast maps with target parcels outlined; B: per domain, every network's fROI
@@ -28,7 +29,7 @@ from tribeloc.plotting import (DOMAIN_COLORS, DOMAIN_LABELS, DOMAINS, NETWORK_LA
 OUT = ROOT / "plots"
 MAP_NETWORKS = {"Lan": "LANGUAGE_noAngG", "MD": "MD", "phys": "PHYSICS", "ToM": "TOM"}
 BAR_NETWORKS = ["LANGUAGE_noAngG", "MD", "TOM", "PHYSICS"]
-Z = "Predicted BOLD (z)"
+Z = "Predicted BOLD (z)\nvs no-input baseline"
 TALL = 1.4                      # bar figures 40% taller than the first version
 DOT_ALPHA = {False: .4, True: .9}   # task dots: faded on non-target bars, strong on the target bar (same colour as the bar)
 
@@ -366,7 +367,7 @@ def length_language(U, parcels, cortex, window):
     ax.set_xscale("log")
     ax.set_xticks([2, 5, 10, 20, 50], ["2", "5", "10", "20", "50"])
     ax.set_xlabel("Mean words per stimulus", fontsize=12)
-    ax.set_ylabel("Language-parcel response\n" + Z, fontsize=11)
+    ax.set_ylabel("Language-parcel response (z)\nvs no-input baseline", fontsize=11)
     ax.text(.04, .96, f"ρ = {rho:.2f}\np = {p:.0e}", transform=ax.transAxes, va="top", fontsize=8,
             bbox=dict(facecolor="white", edgecolor="gray", boxstyle="round,pad=0.3"))
     style_axes(ax)

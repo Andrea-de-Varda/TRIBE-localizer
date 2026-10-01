@@ -35,6 +35,10 @@ paths:
   shards: results/tribe/shards           # TRIBE window means (cluster only, git-ignored)
   analysis: results/analysis             # small derived results (tracked, pushed from the cluster)
 
+baseline:
+  path: results/analysis/baseline/no_input.npz   # zero-feature TRIBE prediction (12_baseline.py)
+  subtract: true           # responses are expressed relative to the window-matched no-input baseline
+
 univariate:
   windows: [full, full_tail]
   n_permutations: 10000    # task-to-domain label permutations, max-statistic FWE
