@@ -13,8 +13,8 @@ This README is the running record of every decision, for the methods section. En
 - [x] Shard quality check (2026-10-01)
 - [x] Univariate domain contrasts, whole-parcel summaries, spin tests, figures (2026-10-01)
 - [x] Multivariate analysis dropped and removed (2026-10-01)
-- [ ] Text localizers (language, MD, ToM, physics): stimuli, TRIBE inference, fROI definition
-- [ ] fROI-based bar plots
+- [x] Text localizer stimuli built and tested; fROI pipeline tested on synthetic data (2026-10-01)
+- [ ] Localizer inference on Engaging (`slurm/localizers.sbatch`), fROIs, fROI-based bar plots
 
 ## Repository layout
 
@@ -23,6 +23,7 @@ config/analysis.yaml     all analysis parameters (single source of truth)
 data/parcels/            original MNI parcel NIfTIs + label tables (see data/parcels/README.md)
 data/parcels/fsaverage5/ projected parcels + cortex mask (npz) and projection audit (csv)
 data/stimuli/            stimulus table (one row per stimulus) and per-task summary
+data/localizers/         localizer stimulus table and summary
 data/external/           pinned clone of LLM_Modularity (git-ignored, re-created by script)
 src/tribeloc/            library: stimuli, parcels, inference, group (statistics), surface (spin-test sphere), plotting
 scripts/                 numbered pipeline steps
@@ -41,6 +42,7 @@ Locally (conda env `analysis`, with `pip install -e '.[test]'`):
 scripts/00_fetch_source.sh            # LLM_Modularity at the pinned commit
 python scripts/01_build_stimuli.py    # data/stimuli/stimuli.csv.gz
 python scripts/02_project_parcels.py  # data/parcels/fsaverage5/
+python scripts/10_build_localizers.py # data/localizers/localizers.csv.gz
 python -m pytest
 ```
 
@@ -66,6 +68,13 @@ git add results/analysis plots logs && git commit -m "Analysis results" && git p
 ```
 
 Steps 08 and 09 need only `results/analysis/univariate.npz` and also run locally.
+
+Localizers (one GPU job; also runs 11, 08 and 09 on the same node):
+
+```bash
+sbatch slurm/localizers.sbatch
+git add results/analysis plots logs && git commit -m "Localizer results" && git push
+```
 
 Each shard is saved as `results/tribe/shards/shard_NNNN.npz` (`stim_id` plus one float32 stimulus × 20,484 array per window). Shards already present are skipped, so failed array tasks can simply be resubmitted.
 
@@ -155,3 +164,25 @@ Results (`full`, whole parcels; selectivity, target set first): Formal tasks: MD
 - `PHYSICS_Kean` dropped for good: one physics parcel set (`PHYSICS`) only. The NIfTI stays in `data/parcels/` as part of the original parcel bundle, but it is no longer projected or analysed. Projections of the other sets are unchanged.
 - Figures: no figure titles (panel labels only); bar plots 40% taller, with one shared y-axis per figure; axes and colour bars labelled in TRIBE's units. **Units:** TRIBE was trained on BOLD that was detrended and z-scored per vertex and run (checkpoint config `neuro.cleaning: standardize: zscore_sample, detrend: true`). Predictions are therefore in z units, i.e. standard deviations of the vertex's training signal, not % signal change, and 0 is the vertex's mean during naturalistic stimulation, not fixation. Labels: "Predicted BOLD (z)"; maps "Δ predicted BOLD (z)".
 - The held-out item-half fROI analysis (planned but never run) is dropped. fROIs will be defined with independent text localizers instead.
+
+### 2026-10-01 — Functional localization with text localizers (Andrea)
+
+Motivation: the parcels of different networks overlap (e.g. MD and physics), and whole-parcel averages mix network-selective and non-selective vertices. As in individual-subject fMRI (Fedorenko et al., 2010), we define functional ROIs inside each parcel with an independent localizer and measure the 46 tasks there. TRIBE predicts a single average subject, so there is one fROI per parcel rather than one per participant. The brain maps are unchanged (whole cortex, no localizer).
+
+**Localizers** (all text, presented like the task stimuli: one isolated 100-s timeline per stimulus, onset 10 s, one whitespace word every 0.5 s, `full` window for selection; `data/localizers/localizers.csv.gz`, built by `10_build_localizers.py`; summary in `data/localizers/summary.csv`):
+
+- **Language: sentences > nonword strings.** The standard EvLab language localizer contrast (Fedorenko et al., 2010, J. Neurophysiol. 104:1177–1194), using the EvLab stimulus sets distributed with the llm-localization code (AlKhamissi et al., 2025, NAACL): all 10 run/set CSVs, 240 sentences and 240 nonword strings, 12 words each, all unique; lowercased as in AlKhamissi et al. Source zip pinned by SHA-256 (`config/analysis.yaml`).
+- **MD: hard > easy arithmetic.** Arithmetic difficulty engages the MD network in individual-subject fMRI (Fedorenko, Duncan & Kanwisher, 2013, PNAS 110(41)). Stimuli reproduce the MD localizer of AlKhamissi et al. (2025) exactly (their `MDLocDataset`, seed 42): "Question: Solve a ± b?\nAnswer: c", operands 100–199 (hard) vs 1–19 (easy), answer included as in their version; 100 hard, 89 easy after dropping 11 exact duplicate easy problems (identical texts get identical TRIBE predictions). Both conditions have exactly 7 words. Decision (Andrea): keep this localizer although 9 of the 20 Formal tasks are arithmetic; it is independent in stimuli, not in topic.
+- **ToM: false belief > false photograph.** The Saxe lab theory-of-mind localizer (Saxe & Kanwisher, 2003, NeuroImage; stories from Dodell-Feder et al., 2011, NeuroImage): 10 belief and 10 photo stories, each followed by its question, without an answer (decision: Andrea). Source zip from saxelab.mit.edu pinned by SHA-256; "True False" response labels removed and line-broken hyphenations rejoined.
+- **Physics: two text adaptations of TowerLoc** (Fischer, Mikhael, Tenenbaum & Kanwisher, 2016, PNAS 113:E5072–E5081, physical vs colour judgements on the same tower videos). Unlike the three localizers above, these are new: TowerLoc is visual, and its text version has not been used before. Both versions start with the TowerLoc cue ("Where will it fall?" or "More blue or yellow?"), since the task cue precedes the tower in TowerLoc and, being first, it can condition the language model's representation of the description that follows. 60 seeded towers of 4–6 blocks (seed 20261006), built from fixed-length phrases.
+  - **physics_task (standard logic):** the same description of each tower, containing weights, placements, colours and patterns, preceded by the physics or the colour cue. The conditions differ only in the 4-word cue, as TowerLoc conditions differ only in the task. Paired by tower.
+  - **physics_content:** the physical description (weights and placements) with the physics cue vs the colour description (colours and patterns) of the same blocks with the colour cue; identical word counts per tower (every block sentence has 12 words). Paired by tower. This variant puts the contrast in the stimulus content, which TRIBE can represent, rather than in the task.
+  - Decision (Andrea): run both; use the standard version if it works, because it matches the neuroscience method exactly. Planned criterion: the standard localizer is used if, in the physics parcels, its split-half held-out fROI effect is positive and the top 10% of its whole-cortex t map is enriched in the physics parcels (spin p < .05); otherwise the content version. Both are reported.
+
+**fROI definition** (`11_localizers.py`, `src/tribeloc/froi.py`). Per vertex t for target > control over localizer stimuli: Welch t (language, MD, ToM) or paired t over towers (physics). Within each parcel, the top 10% of its cortical vertices by t (rounded up) form the fROI, using all localizer stimuli. Overlap between networks' fROIs is allowed and reported (decision: Andrea). Two schemes differ only in the physics fROIs: `froi_task` (standard localizer) and `froi_content`.
+
+**Localizer validation.** Split-half, as in individual-subject fROI work: localizer stimuli are split into two halves (by pair, seed 20261007); the fROI is selected in one half and the target − control difference measured in the other half's stimuli, then the halves swap and the two values are averaged. Reported per parcel for each localizer in its own network (and for every localizer in every network), together with the whole-parcel effect. Where each localizer contrast falls on the cortex: top 10% of its t map vs each parcel set, spin test.
+
+**Task responses in fROIs.** The 46 task maps are averaged over each parcel's fROI vertices, then over parcels; the same statistics and figures as for whole parcels (`network_bars_froi_*`, `domain_bars_*_froi_*`).
+
+**Testing.** Unit tests for the stimuli (MD reproduces AlKhamissi's generator and answers; physics_task versions identical apart from the cue; physics_content word counts matched and content split; halves keep pairs together) and for the t statistics (match scipy), fROI selection and split-half validation. End-to-end run on synthetic localizer predictions with effects planted in one parcel per network: all four planted effects were recovered in the planted parcel only, and the unplanted physics_task localizer gave no effect. Synthetic outputs deleted.

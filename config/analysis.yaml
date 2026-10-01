@@ -54,3 +54,24 @@ spin:
   n_rotations: 1000
   top_fraction: 0.10       # top 10% of cortical vertices of each domain map
   seed: 20261004
+
+localizers:
+  output: data/localizers/localizers.csv.gz
+  shards: results/tribe/localizer_shards  # cluster only, git-ignored
+  windows: [full, full_tail]               # same windows as the task maps (no answer window)
+  half_seed: 20261007                      # split-half validation of each localizer
+  sources:
+    language:
+      url: "https://www.dropbox.com/sh/c9jhmsy4l9ly2xx/AACQ41zipSZFj9mFbDfJJ9c4a?dl=1"
+      sha256: c739e13f5e2768e2045a0aa9bcdd88363ab236fe9ca168ede01d86682a9a7eb3
+    tom:
+      url: https://saxelab.mit.edu/wp-content/uploads/2018/11/tomloc.zip
+      sha256: 8c23782ec3269e22f368c9de7f426dc99bb6e551ebf6613f2eeebd877363845e
+  md: {n: 100, seed: 42}                   # AlKhamissi et al. (2025) MDLocDataset
+  physics: {n_towers: 60, seed: 20261006}
+  contrasts:                               # network: localizer, target > control, test
+    LANGUAGE_noAngG: {localizer: language, target: sentence, control: nonword, test: welch}
+    MD: {localizer: md, target: hard, control: easy, test: welch}
+    TOM: {localizer: tom, target: belief, control: photo, test: welch}
+    PHYSICS: {localizer: physics_task, target: physics, control: colour, test: paired}
+  physics_alternative: {localizer: physics_content, target: physics, control: colour, test: paired}

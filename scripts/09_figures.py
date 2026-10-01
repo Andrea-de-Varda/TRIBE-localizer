@@ -8,6 +8,8 @@ Units: TRIBE was trained on BOLD detrended and z-scored per vertex and run, so p
 (SDs of the training signal; 0 = the vertex's mean during naturalistic stimulation, not fixation).
   enrichment            overlap of each domain map's top 10% with each parcel set, with spin-test significance
   length_language       language-parcel response vs stimulus length across the 46 tasks (the Language confound)
+  localizer_maps        t map of each text localizer contrast, with its network's parcels outlined
+  localizer_validation  split-half held-out effect of each localizer in its own network's parcels
 """
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,10 +29,89 @@ Z = "Predicted BOLD (z)"
 TALL = 1.4                      # bar figures 40% taller than the first version
 
 
+VIEWS = [("left", "lateral"), ("left", "medial"), ("right", "lateral"), ("right", "medial")]
+
+
+def surface_rows(maps, outlines, labels, colours, cbar_label, stem):
+    """One row per map: four views on the inflated surface, outline drawn, symmetric scale at the 99th
+    percentile of |value| per row, with a labelled colour bar."""
+    from nilearn import datasets, plotting
+    fs = datasets.fetch_surf_fsaverage("fsaverage5")
+    n = len(maps)
+    fig, axes = plt.subplots(n, 4, figsize=(8.6 * .9, 1.85 * n * .9), subplot_kw={"projection": "3d"})
+    fig.subplots_adjust(left=.2, right=.9, top=.96, bottom=.02, wspace=-.08, hspace=-.12)
+    for i, (x, outline, label, colour) in enumerate(zip(maps, outlines, labels, colours)):
+        vmax = float(np.nanquantile(np.abs(x), .99))
+        for j, (hemi, view) in enumerate(VIEWS):
+            sl = slice(0, 10242) if hemi == "left" else slice(10242, None)
+            ax = axes[i, j]
+            plotting.plot_surf_stat_map(fs[f"infl_{hemi}"], x[sl], hemi=hemi, view=view, bg_map=fs[f"sulc_{hemi}"],
+                                        axes=ax, cmap="RdBu_r", vmin=-vmax, vmax=vmax, symmetric_cbar=True,
+                                        colorbar=False, threshold=None, bg_on_data=False)
+            plotting.plot_surf_contours(fs[f"infl_{hemi}"], outline[sl].astype(int), hemi=hemi, view=view, levels=[1],
+                                        colors=["black"], axes=ax, linewidths=.8)
+            for c in ax.collections:
+                c.set_rasterized(True)
+            if i == 0:
+                ax.set_title(f"{hemi[0].upper()}H {view}", fontsize=10)
+        pos = axes[i, 0].get_position()
+        fig.text(.005, (pos.y0 + pos.y1) / 2, label, fontsize=11, weight="bold", color=colour, va="center", ha="left")
+        cax = fig.add_axes([.91, pos.y0 + .03 * 4 / n, .012, pos.height - .06 * 4 / n])
+        cb = fig.colorbar(plt.cm.ScalarMappable(cmap="RdBu_r", norm=TwoSlopeNorm(0, -vmax, vmax)), cax=cax)
+        cb.ax.tick_params(labelsize=7)
+        cb.outline.set_linewidth(.5)
+        cb.set_label(cbar_label, fontsize=8)
+    save_fig(fig, OUT / stem)
+
+
+def localizer_maps(parcels, cortex):
+    A = ROOT / load_config()["paths"]["analysis"] / "localizers"
+    if not (A / "contrasts.npz").exists():
+        return
+    C = np.load(A / "contrasts.npz")
+    rows = [("LANGUAGE_noAngG", "LANGUAGE_noAngG", "Language\nsentences >\nnonwords", "Lan"),
+            ("MD", "MD", "MD\nhard > easy\narithmetic", "MD"),
+            ("TOM", "TOM", "ToM\nfalse belief >\nfalse photo", "ToM"),
+            ("PHYSICS", "PHYSICS", "Physics (task)\nphysics > colour\nquestion", "phys"),
+            ("PHYSICS_content", "PHYSICS", "Physics (content)\nphysical > colour\ndescription", "phys")]
+    maps = [np.where(cortex, C[f"{name}__full"], np.nan) for name, *_ in rows]
+    surface_rows(maps, [parcels[net] > 0 for _, net, *_ in rows], [r[2] for r in rows],
+                 [DOMAIN_COLORS[r[3]] for r in rows], "t (localizer contrast)", "localizer_maps_full")
+
+
+def localizer_validation():
+    A = ROOT / load_config()["paths"]["analysis"] / "localizers"
+    if not (A / "validation.csv").exists():
+        return
+    v = pd.read_csv(A / "validation.csv")
+    v = v[v.own & (v.window == "full")]
+    order = [("LANGUAGE_noAngG", "Language", "Lan"), ("MD", "MD", "MD"), ("TOM", "ToM", "ToM"),
+             ("PHYSICS", "Physics\n(task)", "phys"), ("PHYSICS_content", "Physics\n(content)", "phys")]
+    fig, ax = plt.subplots(figsize=(4.2 * .9, 3.0 * .9 * TALL))
+    rng = np.random.default_rng(0)
+    for x, (name, label, d) in enumerate(order):
+        q = v[v.localizer == name]
+        for k, (col, dx, alpha) in enumerate([("whole_parcel_effect", -.18, .3), ("heldout_froi_effect", .18, .7)]):
+            m, e = q[col].mean(), q[col].std(ddof=1) / np.sqrt(len(q))
+            ax.bar(x + dx, m, width=.34, color=DOMAIN_COLORS[d], alpha=alpha, edgecolor="black", lw=.8, zorder=2)
+            ax.errorbar(x + dx, m, yerr=e, color="black", capsize=2.5, lw=1.1, zorder=4)
+            ax.scatter(x + dx + rng.uniform(-.08, .08, len(q)), q[col], s=7, color=DOMAIN_COLORS[d], edgecolor="black",
+                       lw=.3, alpha=.8, zorder=3)
+    ax.axhline(0, color="black", lw=.8, zorder=1)
+    ax.set_xticks(range(len(order)), [o[1] for o in order], fontsize=9)
+    ax.set_ylabel("Localizer effect, target − control\npredicted BOLD (z)", fontsize=11)
+    from matplotlib.patches import Patch
+    ax.legend(handles=[Patch(facecolor="gray", alpha=.3, edgecolor="black", label="whole parcel"),
+                       Patch(facecolor="gray", alpha=.7, edgecolor="black", label="fROI, held-out half")],
+              frameon=False, fontsize=8, loc="upper right")
+    style_axes(ax)
+    save_fig(fig, OUT / "localizer_validation_full")
+
+
 def surface_maps(U, parcels, cortex, window):
     from nilearn import datasets, plotting
     fs = datasets.fetch_surf_fsaverage("fsaverage5")
-    views = [("left", "lateral"), ("left", "medial"), ("right", "lateral"), ("right", "medial")]
+    views = VIEWS
     fig, axes = plt.subplots(4, 4, figsize=(8 * .9, 7.4 * .9), subplot_kw={"projection": "3d"})
     fig.subplots_adjust(left=.14, right=.9, top=.96, bottom=.02, wspace=-.08, hspace=-.12)
     for i, d in enumerate(DOMAINS):
@@ -212,6 +293,8 @@ def main():
         length_language(U, parcels, cortex, window)
         surface_maps(U, parcels, cortex, window)
         print("figures done:", window, flush=True)
+    localizer_maps(parcels, cortex)
+    localizer_validation()
 
 
 if __name__ == "__main__":

@@ -90,12 +90,14 @@ def predict_shard(model, rows, windows, word_seconds, timeline_seconds):
     return out
 
 
-def run_shards(table, shard_ids, cfg, out_dir, cache_root):
-    """Predict the given shards, skipping those already saved. Returns per-shard timing records."""
+def run_shards(table, shard_ids, cfg, out_dir, cache_root, windows=None):
+    """Predict the given shards, skipping those already saved. Returns per-shard timing records.
+    windows: names of configured windows to compute (default: all)."""
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     s, t = cfg["stimuli"], cfg["tribe"]
     shards = assign_shards(table, t["shard_size"])
+    wins = {k: v for k, v in cfg["windows"].items() if windows is None or k in windows}
     log = []
     for k in shard_ids:
         path = out_dir / f"shard_{k:04d}.npz"
@@ -111,7 +113,7 @@ def run_shards(table, shard_ids, cfg, out_dir, cache_root):
         print(f"SHARD {k}: start, {len(rows)} stimuli, {int(rows.n_words.sum())} words, tasks {rows.task.unique().tolist()}", flush=True)
         model = load_model(t["checkpoint"], cache, t["batch_size"], t["text_batch_size"])
         print(f"SHARD {k}: model loaded ({time.time() - start:.0f} s)", flush=True)
-        maps = predict_shard(model, rows, cfg["windows"], s["word_seconds"], s["timeline_seconds"])
+        maps = predict_shard(model, rows, wins, s["word_seconds"], s["timeline_seconds"])
         tmp = path.with_suffix(".tmp.npz")
         np.savez(tmp, stim_id=rows.stim_id.to_numpy().astype(str), **maps)
         tmp.rename(path)

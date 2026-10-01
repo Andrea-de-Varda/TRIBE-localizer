@@ -1,6 +1,8 @@
 """Univariate parcel summaries and spin tests (runs locally on results/analysis/univariate.npz).
 
-For every parcel set and window (whole parcels):
+For every parcel set, window and selection — whole parcels, and (when results/analysis/localizers/frois.npz
+exists) localizer-defined fROIs: "froi_task" (physics fROIs from the standard TowerLoc-style localizer) and
+"froi_content" (physics fROIs from the content-matched localizer; other networks identical):
 per-task responses averaged over parcels (equal weight), the target domain against the other three and
 against each other domain (task-label permutations), and spin tests of each domain contrast map against
 each parcel set. Transposed view (domain_stats.csv): for each domain, the selectivity of its tasks (task response
@@ -29,13 +31,18 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(pc["seed"])
 
+    froi_path = ROOT / P["analysis"] / "localizers" / "frois.npz"
+    frois = dict(np.load(froi_path)) if froi_path.exists() else {}
     rows, stats = [], []
     for w in cfg["univariate"]["windows"]:
-        selections = ["whole_parcel"]
+        selections = ["whole_parcel"] + ([f"froi_{k}" for k in ["task", "content"]] if frois else [])
         for net, target in pc["targets"].items():
             parcel_list = audit[audit.network == net]
-            vsets = [np.flatnonzero((parcels[net] == r.label) & cortex) for r in parcel_list.itertuples()]
             for sel in selections:
+                if sel == "whole_parcel":
+                    vsets = [np.flatnonzero((parcels[net] == r.label) & cortex) for r in parcel_list.itertuples()]
+                else:
+                    vsets = [frois[f"{sel[5:]}__{net}__{r.name}"] for r in parcel_list.itertuples()]
                 per_parcel = np.stack([U[f"task_means_{w}"][:, v].mean(1) for v in vsets])
                 for r, vals in zip(parcel_list.itertuples(), per_parcel):
                     rows += [dict(window=w, selection=sel, network=net, parcel=r.name, hemisphere=r.hemisphere,

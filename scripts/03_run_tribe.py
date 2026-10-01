@@ -3,6 +3,7 @@
     python scripts/03_run_tribe.py --list                     # number of shards
     python scripts/03_run_tribe.py --shards 0                 # benchmark one shard
     python scripts/03_run_tribe.py --array-index 3 --per-task 4   # shards 12-15 (Slurm array)
+    python scripts/03_run_tribe.py --localizers --shards 0 1 2 3 4   # localizer stimuli (all shards)
 """
 import argparse
 import json
@@ -21,10 +22,17 @@ def main():
     ap.add_argument("--array-index", type=int)
     ap.add_argument("--per-task", type=int, default=1)
     ap.add_argument("--list", action="store_true")
-    ap.add_argument("--out", default=str(ROOT / "results" / "tribe" / "shards"))
+    ap.add_argument("--localizers", action="store_true", help="localizer table, windows and output folder")
+    ap.add_argument("--out")
     a = ap.parse_args()
     cfg = load_config()
-    table = pd.read_csv(ROOT / cfg["stimuli"]["output"])
+    if a.localizers:
+        table = pd.read_csv(ROOT / cfg["localizers"]["output"])
+        windows, out = cfg["localizers"]["windows"], ROOT / cfg["localizers"]["shards"]
+    else:
+        table = pd.read_csv(ROOT / cfg["stimuli"]["output"])
+        windows, out = None, ROOT / cfg["paths"]["shards"]
+    a.out = a.out or str(out)
     n = int(assign_shards(table, cfg["tribe"]["shard_size"]).max()) + 1
     if a.list:
         print(n)
@@ -34,7 +42,7 @@ def main():
     shards = a.shards if a.shards is not None else range(a.array_index * a.per_task, min(n, (a.array_index + 1) * a.per_task))
     cache = Path(os.environ.get("TMPDIR", "/tmp")) / f"tribeloc_{os.environ['SLURM_JOB_ID']}"
     print(f"{n} shards in total; this job: {list(shards)}", flush=True)
-    log = run_shards(table, list(shards), cfg, a.out, cache)
+    log = run_shards(table, list(shards), cfg, a.out, cache, windows)
     logdir = Path(a.out).parent / "timing"
     logdir.mkdir(parents=True, exist_ok=True)
     (logdir / f"job_{os.environ['SLURM_JOB_ID']}.json").write_text(json.dumps(log, indent=2))
