@@ -1,0 +1,40 @@
+Lan 8 tasks, max crossnobis 0.05981, FWE p<.05 vertices: 18715
+MD 20 tasks, max crossnobis 0.03525, FWE p<.05 vertices: 18715
+phys 9 tasks, max crossnobis 0.03397, FWE p<.05 vertices: 18715
+ToM 9 tasks, max crossnobis 0.04765, FWE p<.05 vertices: 18715
+full Lan FWE p<.05 vertices: 142
+full MD FWE p<.05 vertices: 439
+full phys FWE p<.05 vertices: 577
+full ToM FWE p<.05 vertices: 495
+full_tail Lan FWE p<.05 vertices: 55
+full_tail MD FWE p<.05 vertices: 459
+full_tail phys FWE p<.05 vertices: 1057
+full_tail ToM FWE p<.05 vertices: 303
+domain               Lan       MD     phys      ToM
+network                                            
+LANGUAGE_noAngG  0.02261  0.01367  0.01326  0.01989
+MD               0.02115  0.01281  0.01231  0.01826
+PHYSICS          0.01910  0.01166  0.01106  0.01663
+PHYSICS_Kean     0.01811  0.01116  0.01048  0.01559
+TOM              0.02428  0.01464  0.01451  0.02121
+domain         network  overlap  enrichment  null_mean_enrichment  p_spin
+   Lan LANGUAGE_noAngG   0.0470      0.5259                1.0033  0.6503
+   Lan              MD   0.0417      0.1889                0.9702  0.9850
+   Lan             TOM   0.0764      0.7377                1.0240  0.6993
+   Lan    PHYSICS_Kean   0.0043      0.0407                0.9380  0.9900
+   Lan         PHYSICS   0.0032      0.0329                0.9410  0.9970
+    MD LANGUAGE_noAngG   0.0449      0.5020                0.9794  0.6474
+    MD              MD   0.0283      0.1284                0.9897  0.9930
+    MD             TOM   0.0604      0.5829                1.0303  0.7912
+    MD    PHYSICS_Kean   0.0021      0.0204                0.9540  0.9910
+    MD         PHYSICS   0.0021      0.0219                0.9491  1.0000
+  phys LANGUAGE_noAngG   0.0433      0.4840                1.0095  0.6733
+  phys              MD   0.0337      0.1526                0.9919  0.9880
+  phys             TOM   0.0737      0.7119                1.0362  0.6913
+  phys    PHYSICS_Kean   0.0021      0.0204                0.9984  0.9970
+  phys         PHYSICS   0.0027      0.0274                0.9941  1.0000
+   ToM LANGUAGE_noAngG   0.0518      0.5796                0.9983  0.6174
+   ToM              MD   0.0427      0.1937                0.9848  0.9870
+   ToM             TOM   0.0743      0.7170                1.0179  0.7133
+   ToM    PHYSICS_Kean   0.0037      0.0356                0.9715  0.9870
+   ToM         PHYSICS   0.0043      0.0439                0.9696  0.9930
