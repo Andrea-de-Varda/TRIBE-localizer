@@ -11,7 +11,8 @@ This README is the running record of every decision, for the methods section. En
 - [x] Parcels projected to fsaverage5 (2026-09-30)
 - [x] Inference code and Slurm scripts written, helpers tested (2026-09-30)
 - [x] TRIBE throughput benchmark on Engaging (2026-09-30, job 24506323)
-- [ ] Full TRIBE inference
+- [x] Full TRIBE inference (2026-10-01, array job 24508074; 183/183 shards, no errors)
+- [ ] Shard quality check (`slurm/qc.sbatch`)
 - [x] Searchlight, univariate, parcel-summary and spin-test code written and tested on synthetic data (2026-09-30)
 - [ ] Searchlight crossnobis and classification (cluster)
 - [ ] Univariate contrasts (cluster)
@@ -60,6 +61,7 @@ sbatch slurm/inference.sbatch               # 46 array tasks x 4 shards, at most
 Then the analysis (CPU), and push the small results back:
 
 ```bash
+sbatch slurm/qc.sbatch                                            # shard quality check -> results/analysis/qc/
 sbatch --array=0-45 slurm/searchlight.sbatch                      # one job per task
 sbatch --dependency=afterok:<array job id> slurm/post.sbatch      # domain maps, univariate, parcels, spin tests
 git add results/analysis && git commit -m "Add analysis results" && git push
@@ -107,6 +109,8 @@ Conclusion: task-demand localizers cannot be simulated in a stimulus-only encodi
 **Univariate measure.** At every vertex, a domain's mean response minus the mean of the other three domains, in the `full` window (`full_tail` as sensitivity). Task maps average all stimuli of a task (correct and incorrect); domain means weight tasks equally. Inference: the 46 task-to-domain labels are permuted 10,000 times; one-sided maximum-statistic FWE over cortical vertices. TRIBE outputs are compared between domains only, so no zero-input baseline is needed. No length covariate (decision: Andrea); mean word count per domain is reported descriptively.
 
 **Benchmark** (2026-09-30, Engaging job 24506323, one A100 80GB). Smallest shard (17, subject_verb_agreement; 1,000 stimuli, 3,068 words): 90 s. Largest (82, number_sorting; 75,056 words): 856 s, of which about 13 min was Llama feature extraction over 36,440 unique (word, context) pairs, since the two answers to a problem share the problem's words. Estimated total about 20 GPU-hours; output about 0.24 GB per shard (43 GB in all). The neuralset warning "LabelEncoder has only found one label" is expected and harmless: `TribeModel.from_pretrained` sets `average_subjects=True`, in which the output layer uses the shared average-subject weights and ignores the subject label (neuraltrain 0.0.2, `SubjectLayersModel.forward`), and the checkpoint has `subject_embedding: false`.
+
+**Full inference** (2026-10-01, array job 24508074, at most 6 A100s at a time). All 183 shards saved (181 in this job, 2 from the benchmark); no errors in any log, only the expected neuralset subject-label warnings. Most shards took 20–260 s; the number_sorting shards took 9–15 min because bracketed number lists tokenize into many tokens per word.
 
 **Parcels on the surface.** Original MNI NIfTIs (checksums verified) projected to fsaverage5 with neuromaps 0.0.7 registration fusion (`mni152_to_fsaverage`, `fsavg_density='10k'`, nearest neighbour). Vertex counts match the pilot's projection exactly. Every parcel projects onto cortex. Nine vertices of PHYSICS lSPL fell in the right hemisphere (midline voxels) and are removed so each parcel stays in its own hemisphere. Cortex mask: Destrieux fsaverage5 labels excluding Unknown and Medial_wall (18,715 of 20,484 vertices). Audit: `data/parcels/fsaverage5/projection_audit.csv`.
 
