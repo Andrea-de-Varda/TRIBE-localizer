@@ -1,0 +1,21 @@
+183 shards in total; this job: [0, 1, 2, 3]
+SHARD 0: start, 1000 stimuli, 3856 words, tasks ['anaphor_gender_agreement']
+SHARD 0: model loaded (19 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 0: saved shard_0000.npz
+SHARD 0: {'shard': 0, 'n_stimuli': 1000, 'n_words': 3856, 'seconds': 44.2306432723999}
+SHARD 1: start, 1000 stimuli, 3840 words, tasks ['anaphor_gender_agreement']
+SHARD 1: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 1: saved shard_0001.npz
+SHARD 1: {'shard': 1, 'n_stimuli': 1000, 'n_words': 3840, 'seconds': 25.76310443878174}
+SHARD 2: start, 1000 stimuli, 3852 words, tasks ['anaphor_gender_agreement']
+SHARD 2: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 2: saved shard_0002.npz
+SHARD 2: {'shard': 2, 'n_stimuli': 1000, 'n_words': 3852, 'seconds': 25.598151922225952}
+SHARD 3: start, 1000 stimuli, 3812 words, tasks ['anaphor_gender_agreement']
+SHARD 3: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 3: saved shard_0003.npz
+SHARD 3: {'shard': 3, 'n_stimuli': 1000, 'n_words': 3812, 'seconds': 25.484397888183594}

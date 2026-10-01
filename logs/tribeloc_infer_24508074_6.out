@@ -1,0 +1,21 @@
+183 shards in total; this job: [24, 25, 26, 27]
+SHARD 24: start, 1000 stimuli, 10000 words, tasks ['wug']
+SHARD 24: model loaded (15 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 24: saved shard_0024.npz
+SHARD 24: {'shard': 24, 'n_stimuli': 1000, 'n_words': 10000, 'seconds': 44.54804730415344}
+SHARD 25: start, 1000 stimuli, 10000 words, tasks ['wug']
+SHARD 25: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 25: saved shard_0025.npz
+SHARD 25: {'shard': 25, 'n_stimuli': 1000, 'n_words': 10000, 'seconds': 34.893487215042114}
+SHARD 26: start, 1000 stimuli, 15560 words, tasks ['wug', 'logic_syllogism_1']
+SHARD 26: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 26: saved shard_0026.npz
+SHARD 26: {'shard': 26, 'n_stimuli': 1000, 'n_words': 15560, 'seconds': 44.34159541130066}
+SHARD 27: start, 1000 stimuli, 18532 words, tasks ['logic_syllogism_1']
+SHARD 27: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 27: saved shard_0027.npz
+SHARD 27: {'shard': 27, 'n_stimuli': 1000, 'n_words': 18532, 'seconds': 50.10214352607727}

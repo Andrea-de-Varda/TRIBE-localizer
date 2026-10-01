@@ -1,0 +1,21 @@
+183 shards in total; this job: [60, 61, 62, 63]
+SHARD 60: start, 1000 stimuli, 9002 words, tasks ['add_sub_3op_symbolic', 'mul_div_2op_verbal']
+SHARD 60: model loaded (12 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 60: saved shard_0060.npz
+SHARD 60: {'shard': 60, 'n_stimuli': 1000, 'n_words': 9002, 'seconds': 42.746910095214844}
+SHARD 61: start, 1000 stimuli, 10000 words, tasks ['mul_div_2op_verbal']
+SHARD 61: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 61: saved shard_0061.npz
+SHARD 61: {'shard': 61, 'n_stimuli': 1000, 'n_words': 10000, 'seconds': 32.901957273483276}
+SHARD 62: start, 1000 stimuli, 9756 words, tasks ['mul_div_2op_verbal']
+SHARD 62: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 62: saved shard_0062.npz
+SHARD 62: {'shard': 62, 'n_stimuli': 1000, 'n_words': 9756, 'seconds': 32.72773003578186}
+SHARD 63: start, 1000 stimuli, 8926 words, tasks ['mul_div_2op_verbal', 'mul_div_2op_symbolic']
+SHARD 63: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 63: saved shard_0063.npz
+SHARD 63: {'shard': 63, 'n_stimuli': 1000, 'n_words': 8926, 'seconds': 31.84472918510437}

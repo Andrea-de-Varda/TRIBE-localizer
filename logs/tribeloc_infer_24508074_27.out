@@ -1,0 +1,21 @@
+183 shards in total; this job: [108, 109, 110, 111]
+SHARD 108: start, 1000 stimuli, 17424 words, tasks ['phys_prost']
+SHARD 108: model loaded (14 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 108: saved shard_0108.npz
+SHARD 108: {'shard': 108, 'n_stimuli': 1000, 'n_words': 17424, 'seconds': 52.76701617240906}
+SHARD 109: start, 1000 stimuli, 39738 words, tasks ['phys_prost', 'physics_buoyancy']
+SHARD 109: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 109: saved shard_0109.npz
+SHARD 109: {'shard': 109, 'n_stimuli': 1000, 'n_words': 39738, 'seconds': 80.69992589950562}
+SHARD 110: start, 1000 stimuli, 54278 words, tasks ['physics_buoyancy']
+SHARD 110: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 110: saved shard_0110.npz
+SHARD 110: {'shard': 110, 'n_stimuli': 1000, 'n_words': 54278, 'seconds': 155.9217460155487}
+SHARD 111: start, 1000 stimuli, 54246 words, tasks ['physics_buoyancy']
+SHARD 111: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 111: saved shard_0111.npz
+SHARD 111: {'shard': 111, 'n_stimuli': 1000, 'n_words': 54246, 'seconds': 157.8428316116333}

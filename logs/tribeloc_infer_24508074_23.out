@@ -1,0 +1,21 @@
+183 shards in total; this job: [92, 93, 94, 95]
+SHARD 92: start, 1000 stimuli, 30696 words, tasks ['code_list']
+SHARD 92: model loaded (13 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 92: saved shard_0092.npz
+SHARD 92: {'shard': 92, 'n_stimuli': 1000, 'n_words': 30696, 'seconds': 133.4338183403015}
+SHARD 93: start, 1000 stimuli, 30884 words, tasks ['code_list']
+SHARD 93: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 93: saved shard_0093.npz
+SHARD 93: {'shard': 93, 'n_stimuli': 1000, 'n_words': 30884, 'seconds': 138.65441846847534}
+SHARD 94: start, 1000 stimuli, 30664 words, tasks ['code_list', 'code_A']
+SHARD 94: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 94: saved shard_0094.npz
+SHARD 94: {'shard': 94, 'n_stimuli': 1000, 'n_words': 30664, 'seconds': 140.733651638031}
+SHARD 95: start, 1000 stimuli, 30056 words, tasks ['code_A']
+SHARD 95: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 95: saved shard_0095.npz
+SHARD 95: {'shard': 95, 'n_stimuli': 1000, 'n_words': 30056, 'seconds': 152.8129403591156}

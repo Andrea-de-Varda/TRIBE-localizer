@@ -1,0 +1,21 @@
+183 shards in total; this job: [132, 133, 134, 135]
+SHARD 132: start, 1000 stimuli, 53856 words, tasks ['physics_stability']
+SHARD 132: model loaded (15 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 132: saved shard_0132.npz
+SHARD 132: {'shard': 132, 'n_stimuli': 1000, 'n_words': 53856, 'seconds': 156.8330078125}
+SHARD 133: start, 1000 stimuli, 56218 words, tasks ['physics_stability', 'physics_temperature']
+SHARD 133: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 133: saved shard_0133.npz
+SHARD 133: {'shard': 133, 'n_stimuli': 1000, 'n_words': 56218, 'seconds': 188.66869044303894}
+SHARD 134: start, 1000 stimuli, 59622 words, tasks ['physics_temperature']
+SHARD 134: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 134: saved shard_0134.npz
+SHARD 134: {'shard': 134, 'n_stimuli': 1000, 'n_words': 59622, 'seconds': 178.5622365474701}
+SHARD 135: start, 1000 stimuli, 59646 words, tasks ['physics_temperature']
+SHARD 135: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 135: saved shard_0135.npz
+SHARD 135: {'shard': 135, 'n_stimuli': 1000, 'n_words': 59646, 'seconds': 192.97069644927979}

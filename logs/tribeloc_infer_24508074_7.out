@@ -1,0 +1,21 @@
+183 shards in total; this job: [28, 29, 30, 31]
+SHARD 28: start, 1000 stimuli, 18564 words, tasks ['logic_syllogism_1']
+SHARD 28: model loaded (15 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 28: saved shard_0028.npz
+SHARD 28: {'shard': 28, 'n_stimuli': 1000, 'n_words': 18564, 'seconds': 64.8146550655365}
+SHARD 29: start, 1000 stimuli, 18492 words, tasks ['logic_syllogism_1']
+SHARD 29: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 29: saved shard_0029.npz
+SHARD 29: {'shard': 29, 'n_stimuli': 1000, 'n_words': 18492, 'seconds': 49.647913217544556}
+SHARD 30: start, 1000 stimuli, 21428 words, tasks ['logic_syllogism_1', 'logic_syllogism_symbolic']
+SHARD 30: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 30: saved shard_0030.npz
+SHARD 30: {'shard': 30, 'n_stimuli': 1000, 'n_words': 21428, 'seconds': 86.73195099830627}
+SHARD 31: start, 1000 stimuli, 23000 words, tasks ['logic_syllogism_symbolic']
+SHARD 31: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 31: saved shard_0031.npz
+SHARD 31: {'shard': 31, 'n_stimuli': 1000, 'n_words': 23000, 'seconds': 110.78932237625122}

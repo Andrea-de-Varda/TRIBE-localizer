@@ -1,0 +1,21 @@
+183 shards in total; this job: [172, 173, 174, 175]
+SHARD 172: start, 1000 stimuli, 54392 words, tasks ['norm_appropriate']
+SHARD 172: model loaded (14 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 172: saved shard_0172.npz
+SHARD 172: {'shard': 172, 'n_stimuli': 1000, 'n_words': 54392, 'seconds': 175.21281719207764}
+SHARD 173: start, 1000 stimuli, 54194 words, tasks ['norm_appropriate']
+SHARD 173: model loaded (2 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 173: saved shard_0173.npz
+SHARD 173: {'shard': 173, 'n_stimuli': 1000, 'n_words': 54194, 'seconds': 223.3220489025116}
+SHARD 174: start, 1000 stimuli, 55438 words, tasks ['norm_appropriate', 'norm_moral']
+SHARD 174: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 174: saved shard_0174.npz
+SHARD 174: {'shard': 174, 'n_stimuli': 1000, 'n_words': 55438, 'seconds': 190.63756108283997}
+SHARD 175: start, 1000 stimuli, 55404 words, tasks ['norm_moral']
+SHARD 175: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 175: saved shard_0175.npz
+SHARD 175: {'shard': 175, 'n_stimuli': 1000, 'n_words': 55404, 'seconds': 196.35785007476807}

@@ -1,0 +1,21 @@
+183 shards in total; this job: [148, 149, 150, 151]
+SHARD 148: start, 1000 stimuli, 13168 words, tasks ['primary_emotions']
+SHARD 148: model loaded (13 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 148: saved shard_0148.npz
+SHARD 148: {'shard': 148, 'n_stimuli': 1000, 'n_words': 13168, 'seconds': 46.59991383552551}
+SHARD 149: start, 1000 stimuli, 13832 words, tasks ['primary_emotions']
+SHARD 149: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 149: saved shard_0149.npz
+SHARD 149: {'shard': 149, 'n_stimuli': 1000, 'n_words': 13832, 'seconds': 35.02170133590698}
+SHARD 150: start, 1000 stimuli, 13368 words, tasks ['primary_emotions']
+SHARD 150: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 150: saved shard_0150.npz
+SHARD 150: {'shard': 150, 'n_stimuli': 1000, 'n_words': 13368, 'seconds': 32.851917028427124}
+SHARD 151: start, 1000 stimuli, 14264 words, tasks ['primary_emotions', 'secondary_emotions']
+SHARD 151: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 151: saved shard_0151.npz
+SHARD 151: {'shard': 151, 'n_stimuli': 1000, 'n_words': 14264, 'seconds': 40.825329303741455}

@@ -1,0 +1,21 @@
+183 shards in total; this job: [4, 5, 6, 7]
+SHARD 4: start, 1000 stimuli, 5128 words, tasks ['anaphor_gender_agreement', 'det_noun_agreement_irregular']
+SHARD 4: model loaded (12 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 4: saved shard_0004.npz
+SHARD 4: {'shard': 4, 'n_stimuli': 1000, 'n_words': 5128, 'seconds': 33.8893141746521}
+SHARD 5: start, 1000 stimuli, 5112 words, tasks ['det_noun_agreement_irregular']
+SHARD 5: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 5: saved shard_0005.npz
+SHARD 5: {'shard': 5, 'n_stimuli': 1000, 'n_words': 5112, 'seconds': 20.934649229049683}
+SHARD 6: start, 1000 stimuli, 5216 words, tasks ['det_noun_agreement_irregular']
+SHARD 6: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 6: saved shard_0006.npz
+SHARD 6: {'shard': 6, 'n_stimuli': 1000, 'n_words': 5216, 'seconds': 21.330731868743896}
+SHARD 7: start, 1000 stimuli, 5116 words, tasks ['det_noun_agreement_irregular', 'det_noun_agreement_regular']
+SHARD 7: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 7: saved shard_0007.npz
+SHARD 7: {'shard': 7, 'n_stimuli': 1000, 'n_words': 5116, 'seconds': 21.77285385131836}

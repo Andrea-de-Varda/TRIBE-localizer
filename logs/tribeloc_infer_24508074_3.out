@@ -1,0 +1,21 @@
+183 shards in total; this job: [12, 13, 14, 15]
+SHARD 12: start, 1000 stimuli, 6264 words, tasks ['det_noun_agreement_regular', 'det_noun_agreement_with_adjective']
+SHARD 12: model loaded (13 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 12: saved shard_0012.npz
+SHARD 12: {'shard': 12, 'n_stimuli': 1000, 'n_words': 6264, 'seconds': 36.02572679519653}
+SHARD 13: start, 1000 stimuli, 6356 words, tasks ['det_noun_agreement_with_adjective']
+SHARD 13: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 13: saved shard_0013.npz
+SHARD 13: {'shard': 13, 'n_stimuli': 1000, 'n_words': 6356, 'seconds': 23.154810667037964}
+SHARD 14: start, 1000 stimuli, 6292 words, tasks ['det_noun_agreement_with_adjective']
+SHARD 14: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 14: saved shard_0014.npz
+SHARD 14: {'shard': 14, 'n_stimuli': 1000, 'n_words': 6292, 'seconds': 23.723137855529785}
+SHARD 15: start, 1000 stimuli, 6392 words, tasks ['det_noun_agreement_with_adjective']
+SHARD 15: model loaded (1 s)
+  features ready, predicting 1000 timelines in 125 batches
+SHARD 15: saved shard_0015.npz
+SHARD 15: {'shard': 15, 'n_stimuli': 1000, 'n_words': 6392, 'seconds': 24.57143235206604}
