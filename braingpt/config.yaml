@@ -1,0 +1,44 @@
+# BrainGPT literature-prior analysis (separate from the TRIBE pipeline). Every choice is logged in braingpt/README.md.
+
+model:
+  base: mistralai/Mistral-7B-v0.1          # gated; needs Hugging Face access
+  adapter: BrainGPT/BrainGPT-7B-v0.2       # LoRA adapter (Luo et al.)
+  dtype: bfloat16
+
+# Prompt prefix used for BrainGPT/BrainBench scoring (as supplied by Andrea).
+prefix: "You are a neuroscientist with deep knowledge in neuroscience. Here is an abstract from a neuroscience publication: "
+
+# Background and methods; {description} from descriptions.tsv, {examples} = example items from the task.
+background: >-
+  We used fMRI to measure brain responses while healthy adult participants silently read short written items,
+  presented one word at a time, and judged whether the final part of each item was correct. Each item consisted of
+  {description}. Example items: {examples}. Items of this type were presented in blocks and compared with a
+  fixation baseline.
+
+# Results sentences: identical apart from {regions}; three paraphrases, averaged.
+results:
+  - "Relative to fixation, these items most strongly activated {regions}."
+  - "The largest responses to these items were observed in {regions}."
+  - "Reading these items engaged {regions} more than any other part of the brain."
+
+# Candidate regions; the visual candidate is a distractor that no task targets.
+candidates:
+  anatomical:
+    Lan: "the left inferior frontal gyrus and the left lateral temporal cortex"
+    MD: "the bilateral middle frontal gyrus, precentral sulcus and intraparietal sulcus"
+    ToM: "the bilateral temporo-parietal junction, precuneus and medial prefrontal cortex"
+    phys: "the bilateral dorsal premotor cortex, supplementary motor area and superior parietal lobule"
+    visual: "the bilateral calcarine sulcus and occipital pole"
+  network:
+    Lan: "the language network"
+    MD: "the multiple-demand network"
+    ToM: "the theory-of-mind network"
+    phys: "the intuitive physics network"
+    visual: "the early visual cortex"
+
+examples:
+  n: 2                  # example items per task (correct completions from data/stimuli/stimuli.csv.gz)
+  max_words: 40         # prefer items up to this length; longer items are truncated to it, with an ellipsis
+  seed: 20261008
+
+n_permutations: 10000   # task-to-domain label permutations for accuracy

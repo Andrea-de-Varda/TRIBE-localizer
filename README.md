@@ -33,6 +33,7 @@ tests/                   pytest
 results/analysis/        small derived results (tracked); results/tribe/ holds the shards (cluster only, git-ignored)
 plots/                   figures (SVG with editable text + PNG)
 logs/                    Slurm logs (tracked)
+braingpt/                separate BrainGPT literature-prior analysis (own README and decision log)
 ```
 
 ## How to run
@@ -252,3 +253,7 @@ Both references are analysed and plotted (`config baseline.references`); the dec
 Pipeline: `06_univariate.py` (needs the shards) now only computes task means for both references (`results/analysis/task_means.npz`); `07_univariate_contrasts.py` computes the contrast maps and FWE p for both. The `task_means.npz` used here was converted from the univariate output of job 24581962 (same numbers, new layout). Localizer fROIs are defined once, on baseline-subtracted localizer responses (the baseline differs between localizer conditions only through stimulus length, so its effect on the localizer contrasts is negligible), and used for both references. All y-axis labels are single-line.
 
 **Effect of the baseline** (`full`, whole parcels): it shifts each network's task responses by a small amount (mean shift: Language +0.008, MD +0.014, ToM −0.006, Physics +0.018 z; the baseline's mean over cortex is 0.0003 z and its SD over time 0.02 z). Target-domain effects: MD 0.042 → 0.042, ToM 0.047 → 0.049, Physics 0.087 → 0.090, Language −0.056 → −0.050. The length confound is unchanged (language-parcel response vs words, ρ = 0.69 raw, 0.67 no-input).
+
+### 2026-10-01 — BrainGPT literature prior (separate sub-project)
+
+Complementary evidence: which network the neuroscience literature would expect for each task, scored with BrainGPT (Luo et al., Nature Human Behaviour). Self-contained in `braingpt/`, with its own README, decision log, config, tests and Slurm job.
