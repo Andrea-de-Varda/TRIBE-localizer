@@ -30,6 +30,7 @@ MAP_NETWORKS = {"Lan": "LANGUAGE_noAngG", "MD": "MD", "phys": "PHYSICS", "ToM": 
 BAR_NETWORKS = ["LANGUAGE_noAngG", "MD", "TOM", "PHYSICS"]
 Z = "Predicted BOLD (z)"
 TALL = 1.4                      # bar figures 40% taller than the first version
+DOT_ALPHA = {False: .4, True: .9}   # task dots: faded on non-target bars, strong on the target bar (same colour as the bar)
 
 
 VIEWS = [("left", "lateral"), ("left", "medial"), ("right", "lateral"), ("right", "medial")]
@@ -170,7 +171,7 @@ def network_panel(ax, s, per_task, net, lo, hi, rng, n_brackets=3, title=True):
         ax.errorbar(x, m, yerr=e, color="black", capsize=3, lw=1.2, zorder=4)
         v = per_task[per_task.domain == d].response.to_numpy()
         ax.scatter(x + rng.uniform(-.18, .18, len(v)), v, s=9, color=DOMAIN_COLORS[d], edgecolor="black",
-                   linewidth=.3, alpha=.8, zorder=3)
+                   linewidth=.3, alpha=DOT_ALPHA[d == target], zorder=3)
     others = sorted([d for d in DOMAINS if d != target], key=lambda d: abs(DOMAINS.index(d) - DOMAINS.index(target)))
     for k, d in enumerate(others):
         bracket(ax, DOMAINS.index(target), DOMAINS.index(d), hi + step * (.6 + 1.5 * k), step * .3,
@@ -279,8 +280,8 @@ def domain_panel(ax, s, per_task, d, measure, lo, hi, rng, title=True):
                edgecolor="black", linewidth=1.2 if is_t else .8, zorder=2)
         ax.errorbar(x, s.loc[net, col], yerr=s.loc[net, f"sem_{measure}"], color="black", capsize=3, lw=1.2, zorder=4)
         v = per_task[(per_task.network == net) & (per_task.domain == d)].value.to_numpy()
-        ax.scatter(x + rng.uniform(-.18, .18, len(v)), v, s=9, color=DOMAIN_COLORS[d], edgecolor="black",
-                   linewidth=.3, alpha=.8, zorder=3)
+        ax.scatter(x + rng.uniform(-.18, .18, len(v)), v, s=9, color=DOMAIN_COLORS[NETWORK_TARGET[net]],
+                   edgecolor="black", linewidth=.3, alpha=DOT_ALPHA[is_t], zorder=3)
     pcol = "p_target_gt_this" if measure == "selectivity" else "p_resp_target_gt_this"
     ti = BAR_NETWORKS.index(tgt)
     others = sorted([n for n in BAR_NETWORKS if n != tgt], key=lambda n: abs(BAR_NETWORKS.index(n) - ti))
