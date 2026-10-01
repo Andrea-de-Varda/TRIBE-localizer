@@ -214,3 +214,11 @@ Whole-cortex t maps (`plots/localizer_maps_full`): the language localizer gives 
 - `domain_bars_response_*` have no significance brackets on purpose: they compare raw response levels across parcel sets, which differ for every domain (language parcels respond about 4× more than the others to all tasks), so a test there would only show that baseline difference. Comparisons across parcel sets are made on selectivity (`domain_bars_selectivity_*`).
 
 **Note on the MD localizer (to revisit).** The arithmetic localizer is weak in TRIBE (held-out fROI effect 0.004 z; 7/20 parcels with t > 2, mostly left-hemisphere; spin p = .067). Kept for now (decision: Andrea, 2026-10-01). A possible alternative is a text verbal working-memory localizer (hard vs easy span, matched in word count), the closest text analogue of the spatial working-memory MD localizer.
+
+### 2026-10-01 — Figure revision (Andrea)
+
+Supersedes the previous figure entry where they differ.
+
+- Maps show the target network's parcels only (the fROI outlines were dropped).
+- **Main figure**, two versions: `main_figure_response_froi_content_<window>` and `main_figure_selectivity_froi_content_<window>`. Panel A: each domain's contrast map (domain minus the other three), target parcels outlined. Panel B, next to each map: for that domain's tasks, every network's fROI raw response (response version) or selectivity (selectivity version), i.e. the corresponding panel of `domain_bars_<measure>_froi_content_<window>`. Each bar panel has its own y-axis. The earlier version with each network's response to the four domains (`main_figure_network_*`) was removed.
+- Significance on the raw-response bars too (decision: Andrea): the domain's target fROI against each other network's fROI, one-sided paired sign-flip across the domain's tasks, on raw responses (`p_resp_target_gt_this` in `domain_stats.csv`). The language fROIs respond strongly to every domain, so in the raw version the target fROI exceeds the language fROI only for Language tasks (Formal, Physics and Social: n.s.); the selectivity version removes this baseline difference.

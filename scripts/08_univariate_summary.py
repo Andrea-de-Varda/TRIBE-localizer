@@ -7,7 +7,7 @@ per-task responses averaged over parcels (equal weight), the target domain again
 against each other domain (task-label permutations), and spin tests of each domain contrast map against
 each parcel set. Transposed view (domain_stats.csv): for each domain, the selectivity of its tasks (task response
 minus the parcel set's mean response to the other three domains) in every parcel set, and the target parcel set
-against each other set (paired sign-flip test across the domain's tasks).
+against each other set (paired sign-flip test across the domain's tasks), on selectivity and on raw response.
 Writes results/analysis/univariate/{parcel_responses,network_stats,domain_stats,spin}.csv.
 """
 import numpy as np
@@ -78,6 +78,8 @@ def main():
                 if n != tgt:
                     rec["diff_target_minus_this"], rec["p_target_gt_this"] = paired_signflip(
                         (selv[tgt] - selv[n])[k].to_numpy(), pc["n_permutations"], rng)
+                    rec["diff_resp_target_minus_this"], rec["p_resp_target_gt_this"] = paired_signflip(
+                        (per[tgt] - per[n])[k].to_numpy(), pc["n_permutations"], rng)
                 dstats.append(rec)
         selv.assign(domain=domains).reset_index().melt(id_vars=["task", "domain"], var_name="network", value_name="selectivity") \
             .assign(window=w, selection=sel).to_csv(out / f"task_selectivity_{sel}_{w}.csv", index=False)

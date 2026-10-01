@@ -8,8 +8,8 @@ Units: TRIBE was trained on BOLD detrended and z-scored per vertex and run, so p
 (SDs of the training signal; 0 = the vertex's mean during naturalistic stimulation, not fixation).
   enrichment            overlap of each domain map's top 10% with each parcel set, with spin-test significance
   length_language       language-parcel response vs stimulus length across the 46 tasks (the Language confound)
-  main_figure_<kind>    contrast maps (parcel + fROI outlines) with, per row, the fROI bars of that network
-                        (kind=network) or every network's fROI selectivity for that domain (kind=selectivity)
+  main_figure_<measure> A: contrast maps with target parcels outlined; B: per domain, every network's fROI
+                        response to it (measure=response) or selectivity for it (measure=selectivity)
   localizer_maps        t map of each text localizer contrast, with its network's parcels outlined
   localizer_validation  split-half held-out effect of each localizer in its own network's parcels
 """
@@ -110,21 +110,8 @@ def localizer_validation():
     save_fig(fig, OUT / "localizer_validation_full")
 
 
-def load_frois(scheme="content"):
-    """{network: boolean vertex mask} of the localizer fROIs (main scheme), or {} if not computed."""
-    path = ROOT / load_config()["paths"]["analysis"] / "localizers" / "frois.npz"
-    if not path.exists():
-        return {}
-    out = {}
-    for k, v in np.load(path).items():
-        sch, net, _ = k.split("__")
-        if sch == scheme:
-            out.setdefault(net, np.zeros(20484, bool))[v] = True
-    return out
-
-
-def brain_row(axes4, x, parcel_mask, froi_mask, vmax, fs):
-    """Four inflated-surface views of x; thin outline = parcels, thicker outline = fROIs."""
+def brain_row(axes4, x, parcel_mask, vmax, fs):
+    """Four inflated-surface views of x with the parcels outlined."""
     from nilearn import plotting
     for ax, (hemi, view) in zip(axes4, VIEWS):
         sl = slice(0, 10242) if hemi == "left" else slice(10242, None)
@@ -132,10 +119,7 @@ def brain_row(axes4, x, parcel_mask, froi_mask, vmax, fs):
                                     axes=ax, cmap="RdBu_r", vmin=-vmax, vmax=vmax, symmetric_cbar=True,
                                     colorbar=False, threshold=None, bg_on_data=False)
         plotting.plot_surf_contours(fs[f"infl_{hemi}"], parcel_mask[sl].astype(int), hemi=hemi, view=view, levels=[1],
-                                    colors=["black"], axes=ax, linewidths=.35)
-        if froi_mask is not None:
-            plotting.plot_surf_contours(fs[f"infl_{hemi}"], froi_mask[sl].astype(int), hemi=hemi, view=view, levels=[1],
-                                        colors=["black"], axes=ax, linewidths=1.6)
+                                    colors=["black"], axes=ax, linewidths=.8)
         for c in ax.collections:
             c.set_rasterized(True)
 
@@ -158,14 +142,13 @@ def colorbar(fig, pos, vmax, label, x=.91):
 def surface_maps(U, parcels, cortex, window):
     from nilearn import datasets
     fs = datasets.fetch_surf_fsaverage("fsaverage5")
-    frois = load_frois()
     fig, axes = plt.subplots(4, 4, figsize=(8 * .9, 6.6 * .9), subplot_kw={"projection": "3d"})
     fig.subplots_adjust(left=.14, right=.9, top=1.02, bottom=.0, wspace=-.08, hspace=-.25)
     for i, d in enumerate(DOMAINS):
         x = np.where(cortex, U[f"contrast_{window}"][i], np.nan)
         vmax = float(np.nanquantile(np.abs(x), .99))
         net = MAP_NETWORKS[d]
-        brain_row(axes[i], x, parcels[net] > 0, frois.get(net), vmax, fs)
+        brain_row(axes[i], x, parcels[net] > 0, vmax, fs)
         pos = axes[i, 0].get_position()
         fig.text(.005, (pos.y0 + pos.y1) / 2, f"{DOMAIN_LABELS[d]}\n> others", fontsize=11, weight="bold",
                  color=DOMAIN_COLORS[d], va="center", ha="left")
@@ -212,50 +195,44 @@ def network_bars(stats, responses, selection, window):
     save_fig(fig, OUT / f"network_bars_{selection}_{window}")
 
 
-def main_figure(U, parcels, cortex, stats, responses, dstats, window, selection="froi_content", kind="network"):
-    """Each row: a domain's contrast map (whole cortex; thin outline = parcels, thick = fROIs) and, to the right,
-    kind="network": the response of that network's fROIs to the four task domains;
-    kind="selectivity": the selectivity of every network's fROIs for that domain."""
+def main_figure(U, parcels, cortex, dstats, window, selection="froi_content", measure="response"):
+    """A: each domain's contrast map (whole cortex, target parcels outlined). B: for the same domain, every
+    network's fROI response to it (measure="response") or selectivity for it (measure="selectivity"), with the
+    target network's fROI compared with each other network's. Each bar panel has its own y-range."""
     from nilearn import datasets
     fs = datasets.fetch_surf_fsaverage("fsaverage5")
-    frois = load_frois(selection.split("_", 1)[1])
-    sub = responses[(responses.selection == selection) & (responses.window == window)]
-    per_all = sub.groupby(["network", "task", "domain"], sort=False).response.mean().reset_index()
-    lo, hi = min(0, per_all.response.min()), per_all.response.max()
-    sel_vals = domain_values(selection, window, "selectivity")
-    sel_lo, sel_hi = min(0, sel_vals.value.min()), sel_vals.value.max()
-    fig = plt.figure(figsize=(11.5 * .9, 7.4 * .9))
+    vals = domain_values(selection, window, measure)
+    fig = plt.figure(figsize=(12.2 * .9, 7.4 * .9))
     gb = fig.add_gridspec(4, 4, left=.1, right=.64, top=1.0, bottom=.02, wspace=-.06, hspace=-.12)
-    gr = fig.add_gridspec(4, 1, left=.765, right=.955, top=.955, bottom=.085, hspace=.38)
+    gr = fig.add_gridspec(4, 1, left=.8, right=.955, top=.955, bottom=.085, hspace=.38)
     rng = np.random.default_rng(0)
-    first_row = None
+    first_row, bar_axes = None, []
     for i, d in enumerate(DOMAINS):
         net = MAP_NETWORKS[d]
         axes4 = [fig.add_subplot(gb[i, j], projection="3d") for j in range(4)]
         first_row = first_row or axes4
         x = np.where(cortex, U[f"contrast_{window}"][i], np.nan)
         vmax = float(np.nanquantile(np.abs(x), .99))
-        brain_row(axes4, x, parcels[net] > 0, frois.get(net), vmax, fs)
+        brain_row(axes4, x, parcels[net] > 0, vmax, fs)
         pos = axes4[0].get_position()
         fig.text(.005, (pos.y0 + pos.y1) / 2, f"{DOMAIN_LABELS[d]}\n> others", fontsize=11, weight="bold",
                  color=DOMAIN_COLORS[d], va="center", ha="left")
         colorbar(fig, pos, vmax, "Δ predicted BOLD (z)", x=.648)
         bax = fig.add_subplot(gr[i])
-        if kind == "network":
-            s = stats[(stats.network == net) & (stats.selection == selection) & (stats.window == window)].iloc[0]
-            network_panel(bax, s, per_all[per_all.network == net], net, lo, hi, rng, title=False)
-            side, ylab = f"{NETWORK_LABELS[net]} fROIs", Z
-        else:
-            s = dstats[(dstats.domain == d) & (dstats.selection == selection) & (dstats.window == window)].set_index("network")
-            domain_panel(bax, s, sel_vals, d, "selectivity", sel_lo, sel_hi, rng, title=False)
-            side, ylab = f"{DOMAIN_LABELS[d]} tasks", "Selectivity (z)"
-        bax.text(1.03, .5, side, transform=bax.transAxes, rotation=270, va="center", ha="left", fontsize=10, weight="bold")
-        bax.set_ylabel(ylab, fontsize=9)
+        bar_axes.append(bax)
+        s = dstats[(dstats.domain == d) & (dstats.selection == selection) & (dstats.window == window)].set_index("network")
+        domain_panel(bax, s, vals, d, measure, None, None, rng, title=False)
+        bax.text(1.03, .5, f"{DOMAIN_LABELS[d]} tasks", transform=bax.transAxes, rotation=270, va="center", ha="left",
+                 fontsize=10, weight="bold", color=DOMAIN_COLORS[d])
+        bax.set_ylabel("Selectivity (z)" if measure == "selectivity" else Z, fontsize=9)
         bax.tick_params(labelsize=8)
         if i < 3:
             bax.set_xticklabels([])
+    bar_axes[-1].set_xlabel("fROIs", fontsize=10)
     view_labels(fig, first_row)
-    save_fig(fig, OUT / f"main_figure_{kind}_{selection}_{window}")
+    fig.text(.005, .985, "A", fontsize=16, weight="bold", va="top")
+    fig.text(.735, .985, "B", fontsize=16, weight="bold", va="top")
+    save_fig(fig, OUT / f"main_figure_{measure}_{selection}_{window}")
 
 
 def domain_values(selection, window, measure):
@@ -272,9 +249,12 @@ def domain_values(selection, window, measure):
 
 
 def domain_panel(ax, s, per_task, d, measure, lo, hi, rng, title=True):
-    """Bars: each parcel set's selectivity for (or response to) domain d; for selectivity, brackets compare the
-    target set with each other set (paired sign-flip across the domain's tasks). Raw responses get no brackets:
-    response levels differ between parcel sets for every domain, so comparing them is not informative."""
+    """Bars: each parcel set's selectivity for (or response to) domain d; brackets compare the target set with
+    each other set (one-sided paired sign-flip across the domain's tasks, on the plotted measure).
+    lo/hi None: y-range from this domain's values only."""
+    if lo is None:
+        v = per_task[per_task.domain == d].value
+        lo, hi = min(0, v.min()), v.max()
     step = .08 * (hi - lo)
     tgt = s.target_network.iloc[0]
     col = f"mean_{measure}"
@@ -286,15 +266,13 @@ def domain_panel(ax, s, per_task, d, measure, lo, hi, rng, title=True):
         v = per_task[(per_task.network == net) & (per_task.domain == d)].value.to_numpy()
         ax.scatter(x + rng.uniform(-.18, .18, len(v)), v, s=9, color=DOMAIN_COLORS[d], edgecolor="black",
                    linewidth=.3, alpha=.8, zorder=3)
-    n_br = 0
-    if measure == "selectivity":
-        ti = BAR_NETWORKS.index(tgt)
-        others = sorted([n for n in BAR_NETWORKS if n != tgt], key=lambda n: abs(BAR_NETWORKS.index(n) - ti))
-        for k, n in enumerate(others):
-            bracket(ax, ti, BAR_NETWORKS.index(n), hi + step * (.6 + 1.5 * k), step * .3,
-                    stars(s.loc[n, "p_target_gt_this"]), fontsize=7)
-        n_br = len(others)
-        ax.axhline(0, color="black", lw=.8, zorder=1)
+    pcol = "p_target_gt_this" if measure == "selectivity" else "p_resp_target_gt_this"
+    ti = BAR_NETWORKS.index(tgt)
+    others = sorted([n for n in BAR_NETWORKS if n != tgt], key=lambda n: abs(BAR_NETWORKS.index(n) - ti))
+    for k, n in enumerate(others):
+        bracket(ax, ti, BAR_NETWORKS.index(n), hi + step * (.6 + 1.5 * k), step * .3, stars(s.loc[n, pcol]), fontsize=7)
+    n_br = len(others)
+    ax.axhline(0, color="black", lw=.8, zorder=1)
     ax.set_ylim(lo - .05 * (hi - lo), hi + step * (.6 + 1.5 * n_br) + .3 * step)
     ax.set_xticks(range(len(BAR_NETWORKS)), [NETWORK_LABELS[n] for n in BAR_NETWORKS], rotation=30, ha="right", fontsize=10)
     if title:
@@ -391,8 +369,8 @@ def main():
         length_language(U, parcels, cortex, window)
         surface_maps(U, parcels, cortex, window)
         if "froi_content" in set(stats.selection):
-            for kind in ["network", "selectivity"]:
-                main_figure(U, parcels, cortex, stats, responses, dstats, window, kind=kind)
+            for measure in ["response", "selectivity"]:
+                main_figure(U, parcels, cortex, dstats, window, measure=measure)
         print("figures done:", window, flush=True)
     localizer_maps(parcels, cortex)
     localizer_validation()
