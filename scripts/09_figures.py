@@ -29,7 +29,9 @@ from tribeloc.plotting import (DOMAIN_COLORS, DOMAIN_LABELS, DOMAINS, NETWORK_LA
 OUT = ROOT / "plots"
 MAP_NETWORKS = {"Lan": "LANGUAGE_noAngG", "MD": "MD", "phys": "PHYSICS", "ToM": "TOM"}
 BAR_NETWORKS = ["LANGUAGE_noAngG", "MD", "TOM", "PHYSICS"]
-Z = "Predicted BOLD (z)\nvs no-input baseline"
+Z = "Predicted BOLD (z)"         # set per response reference in main()
+UNI = ROOT / "results" / "analysis" / "univariate"   # set per response reference in main()
+Z_LABELS = {"noinput": "Predicted BOLD vs no input (z)", "raw": "Predicted BOLD (z)"}
 TALL = 1.4                      # bar figures 40% taller than the first version
 DOT_ALPHA = {False: .4, True: .9}   # task dots: faded on non-target bars, strong on the target bar (same colour as the bar)
 
@@ -104,7 +106,7 @@ def localizer_validation():
                        lw=.3, alpha=.8, zorder=3)
     ax.axhline(0, color="black", lw=.8, zorder=1)
     ax.set_xticks(range(len(order)), [o[1] for o in order], fontsize=9)
-    ax.set_ylabel("Localizer effect, target − control\npredicted BOLD (z)", fontsize=11)
+    ax.set_ylabel("Localizer effect (z)", fontsize=11)
     from matplotlib.patches import Patch
     ax.legend(handles=[Patch(facecolor="gray", alpha=.3, edgecolor="black", label="whole parcel"),
                        Patch(facecolor="gray", alpha=.7, edgecolor="black", label="fROI, held-out half")],
@@ -245,11 +247,12 @@ def main_figure(U, parcels, cortex, dstats, window, selection="froi_content", me
             side, colour = f"{DOMAIN_LABELS[d]} tasks", DOMAIN_COLORS[d]
         bax.text(1.03, .5, side, transform=bax.transAxes, rotation=270, va="center", ha="left",
                  fontsize=10, weight="bold", color=colour)
-        bax.set_ylabel("Selectivity (z)" if measure == "selectivity" else Z, fontsize=9)
+        bax.set_ylabel("")
         bax.tick_params(labelsize=8)
         if i < 3:
             bax.set_xticklabels([])
     bar_axes[-1].set_xlabel("Task domain" if measure == "network" else "fROIs", fontsize=10)
+    fig.text(.752, .52, SEL_LABEL if measure == "selectivity" else Z, rotation=90, ha="center", va="center", fontsize=11)
     view_labels(fig, first_row)
     fig.text(.005, .985, "A", fontsize=16, weight="bold", va="top")
     fig.text(.735, .985, "B", fontsize=16, weight="bold", va="top")
@@ -258,7 +261,7 @@ def main_figure(U, parcels, cortex, dstats, window, selection="froi_content", me
 
 def domain_values(selection, window, measure):
     """Per-task values per parcel set: selectivity, or raw response."""
-    A = ROOT / load_config()["paths"]["analysis"] / "univariate"
+    A = UNI
     if measure == "selectivity":
         per_task = pd.read_csv(A / f"task_selectivity_{selection}_{window}.csv").rename(columns={"selectivity": "value"})
     else:
@@ -303,7 +306,7 @@ def domain_panel(ax, s, per_task, d, measure, lo, hi, rng, title=True):
     return ax.get_ylim()
 
 
-SEL_LABEL = "Selectivity, predicted BOLD (z)\n(domain − other domains)"
+SEL_LABEL = "Selectivity (z)"
 
 
 def domain_bars(dstats, selection, window, measure):
@@ -367,7 +370,7 @@ def length_language(U, parcels, cortex, window):
     ax.set_xscale("log")
     ax.set_xticks([2, 5, 10, 20, 50], ["2", "5", "10", "20", "50"])
     ax.set_xlabel("Mean words per stimulus", fontsize=12)
-    ax.set_ylabel("Language-parcel response (z)\nvs no-input baseline", fontsize=11)
+    ax.set_ylabel("Language-parcel " + Z[0].lower() + Z[1:], fontsize=10)
     ax.text(.04, .96, f"ρ = {rho:.2f}\np = {p:.0e}", transform=ax.transAxes, va="top", fontsize=8,
             bbox=dict(facecolor="white", edgecolor="gray", boxstyle="round,pad=0.3"))
     style_axes(ax)
@@ -376,27 +379,33 @@ def length_language(U, parcels, cortex, window):
 
 
 def main():
+    global OUT, UNI, Z
     apply_style()
     cfg = load_config()
     A = ROOT / cfg["paths"]["analysis"]
     U = np.load(A / "univariate.npz", allow_pickle=False)
     parcels, cortex, _ = load_parcels(ROOT / cfg["parcels"]["output"], ROOT / cfg["parcels"]["audit"])
-    stats = pd.read_csv(A / "univariate" / "network_stats.csv")
-    responses = pd.read_csv(A / "univariate" / "parcel_responses.csv")
-    spin = pd.read_csv(A / "univariate" / "spin.csv")
-    dstats = pd.read_csv(A / "univariate" / "domain_stats.csv")
-    for window in cfg["univariate"]["windows"]:
-        for selection in stats[stats.window == window].selection.unique():
-            network_bars(stats, responses, selection, window)
-            for measure in ["selectivity", "response"]:
-                domain_bars(dstats, selection, window, measure)
-        enrichment(spin, window)
-        length_language(U, parcels, cortex, window)
-        surface_maps(U, parcels, cortex, window)
-        if "froi_content" in set(stats.selection):
-            for measure in ["response", "selectivity", "network"]:
-                main_figure(U, parcels, cortex, dstats, window, measure=measure, stats=stats, responses=responses)
-        print("figures done:", window, flush=True)
+    root_out = OUT
+    for ref in cfg["baseline"]["references"]:
+        OUT, UNI, Z = root_out / ref, A / "univariate" / ref, Z_LABELS[ref]
+        Uref = {f"{k}_{w}": U[f"{k}_{ref}_{w}"] for k in ["task_means", "contrast", "p_fwe"] for w in cfg["univariate"]["windows"]}
+        stats = pd.read_csv(UNI / "network_stats.csv")
+        responses = pd.read_csv(UNI / "parcel_responses.csv")
+        spin = pd.read_csv(UNI / "spin.csv")
+        dstats = pd.read_csv(UNI / "domain_stats.csv")
+        for window in cfg["univariate"]["windows"]:
+            for selection in stats[stats.window == window].selection.unique():
+                network_bars(stats, responses, selection, window)
+                for measure in ["selectivity", "response"]:
+                    domain_bars(dstats, selection, window, measure)
+            enrichment(spin, window)
+            length_language(Uref, parcels, cortex, window)
+            surface_maps(Uref, parcels, cortex, window)
+            if "froi_content" in set(stats.selection):
+                for measure in ["response", "selectivity", "network"]:
+                    main_figure(Uref, parcels, cortex, dstats, window, measure=measure, stats=stats, responses=responses)
+            print("figures done:", ref, window, flush=True)
+    OUT = root_out
     localizer_maps(parcels, cortex)
     localizer_validation()
 

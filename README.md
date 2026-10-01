@@ -15,7 +15,7 @@ This README is the running record of every decision, for the methods section. En
 - [x] Multivariate analysis dropped and removed (2026-10-01)
 - [x] Text localizer stimuli built and tested; fROI pipeline tested on synthetic data (2026-10-01)
 - [x] Localizer inference (2026-10-01, Engaging job 24570531), fROIs, fROI-based bar plots
-- [ ] No-input baseline and baseline-subtracted re-analysis (`slurm/baseline.sbatch`)
+- [x] No-input baseline (2026-10-01, Engaging job 24581962) and re-analysis with both response references
 
 ## Repository layout
 
@@ -64,11 +64,11 @@ Then the analysis (CPU), and push the small results back:
 
 ```bash
 sbatch slurm/qc.sbatch            # shard quality check -> results/analysis/qc/
-sbatch slurm/post.sbatch          # 06 univariate maps, 08 parcel summaries + spin tests, 09 figures -> plots/
+sbatch slurm/post.sbatch          # 06 task means, 07 contrast maps, 08 parcel summaries + spin tests, 09 figures -> plots/
 git add results/analysis plots logs && git commit -m "Analysis results" && git push
 ```
 
-Steps 08 and 09 need only `results/analysis/univariate.npz` and also run locally.
+Steps 07, 08 and 09 need only `results/analysis/task_means.npz` (from 06) and also run locally.
 
 No-input baseline (one GPU job; then re-runs 06, 11, 08 and 09 with baseline subtraction on the same node):
 
@@ -241,3 +241,14 @@ Supersedes the previous figure entry where they differ.
 **Baseline.** The no-input prediction: TRIBE's output when all text features are zero, which is what the model receives at every time point without a word (the zero-feature reference also used in the collaborator's pilot). With zero features every timeline is identical (same average subject, same 100-s segment), so the baseline depends only on time within the segment. One prediction gives its time course (`12_baseline.py`; check: two dummy timelines with different words must give identical predictions). Each stimulus's baseline is that time course averaged over the stimulus's own analysis window (onset 10 s to the stimulus end, or end + 4 s), and is subtracted from the stimulus's response before any analysis: task maps (06) and localizer responses (11). It depends on window length, so it differs slightly between stimuli of different lengths. This is the computational counterpart of a no-stimulus baseline, not human rest. Axes: "Predicted BOLD (z) vs no-input baseline". Raw task means are kept (`task_means_raw_<window>` in `univariate.npz`).
 
 **Caveat on comparing raw responses across networks** (to state in the paper). Predicted amplitude also scales with how well TRIBE predicts a vertex: poorly predicted vertices have predictions shrunk towards 0. The language network is predicted best from text, which plausibly contributes to its larger responses to all tasks. Inferences should therefore rest on comparisons within a network (across task domains) or on selectivity, not on raw response levels across networks.
+
+### 2026-10-01 — Two response references kept (Andrea)
+
+Both references are analysed and plotted (`config baseline.references`); the decision is not to replace one with the other.
+
+- **noinput**: responses minus the window-matched no-input baseline (previous entry). Results in `results/analysis/univariate/noinput/`, figures in `plots/noinput/`; axis "Predicted BOLD vs no input (z)".
+- **raw**: TRIBE's raw prediction, i.e. relative to the vertex's mean during the naturalistic stimulation of the training data. Results in `results/analysis/univariate/raw/`, figures in `plots/raw/`; axis "Predicted BOLD (z)". Identical to the analysis before the baseline was introduced (FWE vertex counts reproduce exactly).
+
+Pipeline: `06_univariate.py` (needs the shards) now only computes task means for both references (`results/analysis/task_means.npz`); `07_univariate_contrasts.py` computes the contrast maps and FWE p for both. The `task_means.npz` used here was converted from the univariate output of job 24581962 (same numbers, new layout). Localizer fROIs are defined once, on baseline-subtracted localizer responses (the baseline differs between localizer conditions only through stimulus length, so its effect on the localizer contrasts is negligible), and used for both references. All y-axis labels are single-line.
+
+**Effect of the baseline** (`full`, whole parcels): it shifts each network's task responses by a small amount (mean shift: Language +0.008, MD +0.014, ToM −0.006, Physics +0.018 z; the baseline's mean over cortex is 0.0003 z and its SD over time 0.02 z). Target-domain effects: MD 0.042 → 0.042, ToM 0.047 → 0.049, Physics 0.087 → 0.090, Language −0.056 → −0.050. The length confound is unchanged (language-parcel response vs words, ρ = 0.69 raw, 0.67 no-input).

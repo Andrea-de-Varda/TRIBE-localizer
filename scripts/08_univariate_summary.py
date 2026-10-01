@@ -8,7 +8,8 @@ against each other domain (task-label permutations), and spin tests of each doma
 each parcel set. Transposed view (domain_stats.csv): for each domain, the selectivity of its tasks (task response
 minus the parcel set's mean response to the other three domains) in every parcel set, and the target parcel set
 against each other set (paired sign-flip test across the domain's tasks), on selectivity and on raw response.
-Writes results/analysis/univariate/{parcel_responses,network_stats,domain_stats,spin}.csv.
+Run for each response reference (config baseline.references); writes
+results/analysis/univariate/<ref>/{parcel_responses,network_stats,domain_stats,spin}.csv.
 """
 import numpy as np
 import pandas as pd
@@ -22,12 +23,18 @@ from tribeloc.surface import sphere_coords
 
 def main():
     cfg = load_config()
+    U = np.load(ROOT / cfg["paths"]["analysis"] / "univariate.npz")
+    for ref in cfg["baseline"]["references"]:
+        print(f"== reference: {ref}", flush=True)
+        summarize(cfg, U, ref)
+
+
+def summarize(cfg, U, ref):
     pc, sc, P = cfg["parcel_summary"], cfg["spin"], cfg["paths"]
-    U = np.load(ROOT / P["analysis"] / "univariate.npz")
     tasks = pd.read_csv(ROOT / "data" / "stimuli" / "task_summary.csv")   # task order = task_index
     domains = tasks.domain.to_numpy().astype(str)
     parcels, cortex, audit = load_parcels(ROOT / cfg["parcels"]["output"], ROOT / cfg["parcels"]["audit"])
-    out = ROOT / P["analysis"] / "univariate"
+    out = ROOT / P["analysis"] / "univariate" / ref
     out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(pc["seed"])
 
@@ -43,7 +50,7 @@ def main():
                     vsets = [np.flatnonzero((parcels[net] == r.label) & cortex) for r in parcel_list.itertuples()]
                 else:
                     vsets = [frois[f"{sel[5:]}__{net}__{r.name}"] for r in parcel_list.itertuples()]
-                per_parcel = np.stack([U[f"task_means_{w}"][:, v].mean(1) for v in vsets])
+                per_parcel = np.stack([U[f"task_means_{ref}_{w}"][:, v].mean(1) for v in vsets])
                 for r, vals in zip(parcel_list.itertuples(), per_parcel):
                     rows += [dict(window=w, selection=sel, network=net, parcel=r.name, hemisphere=r.hemisphere,
                                   task=t, domain=d, response=float(x)) for t, d, x in zip(tasks.task, domains, vals)]
@@ -93,7 +100,7 @@ def main():
     spin = []
     for w in cfg["univariate"]["windows"]:
         for i, d in enumerate(DOMAINS):
-            res = spin_test(U[f"contrast_{w}"][i], cortex, networks, spheres, sc["n_rotations"], sc["top_fraction"], srng)
+            res = spin_test(U[f"contrast_{ref}_{w}"][i], cortex, networks, spheres, sc["n_rotations"], sc["top_fraction"], srng)
             spin += [dict(window=w, domain=d, network=net, **r) for net, r in res.items()]
     spin = pd.DataFrame(spin)
     spin.to_csv(out / "spin.csv", index=False)

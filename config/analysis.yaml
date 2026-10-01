@@ -37,7 +37,8 @@ paths:
 
 baseline:
   path: results/analysis/baseline/no_input.npz   # zero-feature TRIBE prediction (12_baseline.py)
-  subtract: true           # responses are expressed relative to the window-matched no-input baseline
+  subtract: true           # localizer responses relative to the no-input baseline (11_localizers.py)
+  references: [noinput, raw]   # task responses analysed both ways: vs no-input baseline (main), and raw
 
 univariate:
   windows: [full, full_tail]
