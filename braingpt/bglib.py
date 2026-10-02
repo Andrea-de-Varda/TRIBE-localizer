@@ -15,6 +15,7 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 DOMAINS = ["Lan", "MD", "phys", "ToM"]
 CANDIDATES = DOMAINS + ["visual"]
+NULL_TASK = "__neutral__"     # neutral abstract used to calibrate the results sentences (PMI)
 
 def load_config():
     return yaml.safe_load((HERE / "config.yaml").read_text())
@@ -49,6 +50,13 @@ def build_texts(cfg, tasks, stimuli):
                     rows.append(dict(task=task, domain=g.domain.iloc[0], style=style, candidate=cand, paraphrase=k,
                                      example_item=item, context=context, result=result,
                                      text=context + result))
+    null = cfg["prefix"] + cfg["null_background"] + " "
+    for style, cands in cfg["candidates"].items():
+        for cand in CANDIDATES:
+            for k, template in enumerate(cfg["results"]):
+                result = template.format(regions=cands[cand])
+                rows.append(dict(task=NULL_TASK, domain="none", style=style, candidate=cand, paraphrase=k,
+                                 example_item=-1, context=null, result=result, text=null + result))
     return pd.DataFrame(rows)
 
 
@@ -70,12 +78,22 @@ def score_text(model, tok, context, result):
 
 # ── analysis ──────────────────────────────────────────────────────────────────────────────────────────────
 
-def task_preferences(scores, measure="ppl"):
-    """Per task and style: preference for each candidate, averaged over paraphrases. For ppl: minus
-    (log perplexity minus its mean over candidates), so higher = preferred and the mean over candidates is 0.
-    For logprob_result: log-probability minus its mean over candidates."""
-    s = scores.copy()
-    s["value"] = -np.log(s.ppl) if measure == "ppl" else s.logprob_result
+def add_pmi(scores):
+    """PMI = log p(result | task abstract) - log p(result | neutral abstract), for the same style, candidate and
+    paraphrase (domain-conditional PMI; Holtzman et al., 2021). Same tokens in both terms, so phrase length and
+    baseline frequency cancel. Returns the task rows only, with a `pmi` column."""
+    null = scores[scores.task == NULL_TASK].set_index(["style", "candidate", "paraphrase"]).logprob_result
+    s = scores[scores.task != NULL_TASK].copy()
+    s["pmi"] = s.logprob_result.to_numpy() - null.loc[list(zip(s["style"], s.candidate, s.paraphrase))].to_numpy()
+    return s
+
+
+def task_preferences(scores, measure="pmi"):
+    """Per task and style: preference for each candidate, averaged over paraphrases, minus its mean over candidates
+    (higher = preferred; 0 = average). measure: pmi (primary), ppl (BrainBench full-text perplexity, as minus log
+    perplexity) or logprob_result (uncalibrated results-sentence log-probability)."""
+    s = add_pmi(scores) if measure == "pmi" else scores[scores.task != NULL_TASK].copy()
+    s["value"] = {"pmi": lambda: s.pmi, "ppl": lambda: -np.log(s.ppl), "logprob_result": lambda: s.logprob_result}[measure]()
     m = s.groupby(["task", "domain", "style", "candidate"], sort=False).value.mean().unstack("candidate")[CANDIDATES]
     return m.sub(m.mean(1), axis=0).reset_index()
 

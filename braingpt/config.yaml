@@ -16,6 +16,13 @@ background: >-
   "{correct}" ({correct_label}) versus "{incorrect}" ({incorrect_label}). Items were presented in blocks, and responses
   were compared with a fixation baseline.
 
+# Neutral abstract for calibration (PMI): the same template without any task information. Every results sentence is
+# also scored after it; the calibrated score is log p(result | task abstract) - log p(result | neutral abstract).
+null_background: >-
+  We used fMRI to measure brain responses while healthy adult participants read short written items, presented one
+  word at a time, and judged whether each item was correct. Items were presented in blocks, and responses were
+  compared with a fixation baseline.
+
 # Results sentences: identical apart from {regions}; three paraphrases, averaged.
 results:
   - "Relative to fixation, the task most strongly engaged {regions}."

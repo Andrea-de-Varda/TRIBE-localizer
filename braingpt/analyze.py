@@ -1,7 +1,8 @@
 """Summarize BrainGPT scores (CPU, local): picks, confusion matrices, accuracy with permutation tests, and figures.
 
-Primary measure: full-abstract perplexity (BrainBench criterion). Robustness: log-probability of the results
-sentence given the abstract. Both for anatomical and network-name candidates.
+Primary measure: PMI of the results sentence with the task abstract (log p given the task abstract minus log p given
+a neutral abstract), which removes the candidates' length and baseline-frequency differences. Also reported: BrainBench
+full-abstract perplexity and the uncalibrated results-sentence log-probability. Anatomical and network-name candidates.
 Writes results/{preferences,picks,summary}.csv and plots/.
 """
 import matplotlib.pyplot as plt
@@ -14,7 +15,7 @@ from tribeloc.plotting import DOMAIN_COLORS, DOMAIN_LABELS, apply_style, save_fi
 
 CAND_COLORS = {**DOMAIN_COLORS, "visual": "#7f7f7f"}
 CAND_LABELS = {"Lan": "Language", "MD": "MD", "ToM": "ToM", "phys": "Physics", "visual": "Visual"}
-MEASURES = {"ppl": "full-abstract perplexity", "logprob_result": "results-sentence log-probability"}
+MEASURES = {"pmi": "calibrated (PMI)", "ppl": "full-abstract perplexity", "logprob_result": "results-sentence log-probability"}
 
 
 def plot_confusion(p, style, measure):

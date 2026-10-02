@@ -6,8 +6,8 @@ import pandas as pd
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from bglib import (CANDIDATES, HERE, ROOT, accuracy_permutation, build_texts, confusion, load_config,  # noqa: E402
-                   pick_example, picks, score_text, task_preferences)
+from bglib import (CANDIDATES, HERE, NULL_TASK, ROOT, accuracy_permutation, build_texts, confusion,  # noqa: E402
+                   load_config, pick_example, picks, score_text, task_preferences)
 
 
 def test_task_specs_cover_all_tasks():
@@ -41,7 +41,13 @@ def test_abstracts_contain_the_pair_and_candidates_differ_only_in_the_regions():
                              manipulation=["Manipulation one.", "Manipulation two."],
                              correct_label=["grammatical", "correct"], incorrect_label=["ungrammatical", "incorrect"]))
     t = build_texts(cfg, spec, fake_stimuli())
-    assert len(t) == 2 * len(cfg["candidates"]) * len(CANDIDATES) * len(cfg["results"])
+    per_abstract = len(cfg["candidates"]) * len(CANDIDATES) * len(cfg["results"])
+    assert len(t) == 3 * per_abstract                        # two tasks + the neutral abstract
+    null = t[t.task == NULL_TASK]
+    assert len(null) == per_abstract and null.context.nunique() == 1 and "For example" not in null.context.iloc[0]
+    # the neutral abstract scores exactly the same results sentences as the task abstracts
+    assert set(null.result) == set(t[t.task == "t1"].result)
+    t = t[t.task != NULL_TASK]
     for (task, style, k), g in t.groupby(["task", "style", "paraphrase"]):
         ctx = g.context.iloc[0]
         assert g.context.nunique() == 1 and g.candidate.tolist() == CANDIDATES
@@ -78,15 +84,18 @@ def test_score_text_attributes_tokens_to_the_result_sentence():
     assert r["logprob_result"] == pytest.approx(-len("result.") * np.log(50))
 
 
-def synthetic_scores(correct=True):
-    rows = []
+def synthetic_scores(correct=True, bias=None):
+    """bias: {candidate: log-prob offset added in every abstract, including the neutral one}."""
+    bias = bias or {}
+    rows = [dict(task=NULL_TASK, domain="none", style="anatomical", candidate=c, paraphrase=k, ppl=11.0,
+                 logprob_result=-5.5 + bias.get(c, 0)) for c in CANDIDATES for k in range(3)]
     for t in range(20):
         dom = ["Lan", "MD", "phys", "ToM"][t % 4]
         for c in CANDIDATES:
             for k in range(3):
                 best = (c == dom) if correct else (c == "visual")
                 rows.append(dict(task=f"t{t}", domain=dom, style="anatomical", candidate=c, paraphrase=k,
-                                 ppl=10.0 if best else 12.0, logprob_result=-5.0 if best else -6.0))
+                                 ppl=10.0 if best else 12.0, logprob_result=(-5.0 if best else -6.0) + bias.get(c, 0)))
     return pd.DataFrame(rows)
 
 
@@ -101,3 +110,13 @@ def test_analysis_perfect_and_constant_pickers():
     p = picks(task_preferences(synthetic_scores(False), "logprob_result"))
     acc, pv = accuracy_permutation(p, 2000, rng)
     assert acc == 0.0 and pv == 1.0 and (p.pick == "visual").all()
+
+
+def test_pmi_removes_a_bias_shared_by_all_abstracts():
+    # a large constant advantage for one candidate (e.g. a short or frequent phrase) wins the uncalibrated measure
+    # for every task, but cancels in the PMI
+    scores = synthetic_scores(True, bias={"visual": 3.0})
+    raw = picks(task_preferences(scores, "logprob_result"))
+    assert (raw.pick == "visual").all()
+    pmi = picks(task_preferences(scores, "pmi"))
+    assert pmi.correct.all()
