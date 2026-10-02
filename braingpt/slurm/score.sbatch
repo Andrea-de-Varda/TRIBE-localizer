@@ -17,3 +17,4 @@ python -c "import peft, accelerate; print('peft', peft.__version__, 'accelerate'
 cd braingpt
 python score.py
 python analyze.py
+python plot_assignments.py

@@ -11,6 +11,7 @@ bglib.py              abstract construction, scoring, analysis helpers
 build_abstracts.py    -> data/abstracts.csv (all texts to score), data/abstracts_preview.txt (one abstract per task)
 score.py              -> results/scores.csv (GPU)
 analyze.py            -> results/{preferences,picks,summary}.csv, plots/ (confusion matrices, assignment counts)
+plot_assignments.py   -> plots/assignment_diagram_<measure>_<style> (main figure)
 slurm/score.sbatch    scoring + analysis on Engaging
 tests/                pytest (run from the repository root: python -m pytest)
 ```
@@ -82,3 +83,7 @@ Calibration removes the candidate biases: with anatomical candidates the distrac
 | network names | 0.89 (41/46) | 0.94 | < .001 | 8/8 | 15/20 | 9/9 | 9/9 |
 
 Remaining errors: the five code tasks go to the physics candidate under both phrasings (anatomically, the physics regions — dorsal premotor, SMA, superior parietal — overlap the dorsal fronto-parietal MD system); with anatomical candidates, four physics tasks (buoyancy, brightness, solubility, temperature: descriptions of substances, liquids and light) go to early visual cortex, and logic_propositional_1 to the language candidate.
+
+### 2026-10-01 — Assignment diagram (main figure; Andrea)
+
+`plot_assignments.py` → `plots/assignment_diagram_<measure>_<style>.{svg,png}`. The 46 tasks along the bottom (short names and within-domain order as in the LLM-modularity paper), grouped Language, Formal, Physics, Social, with per-domain counts of correct assignments; the five candidate networks along the top, each above its domain's tasks (distractor at the right), with the number of tasks assigned. One curve per task to the network BrainGPT assigned it to, coloured by the task's target network: a curve whose colour differs from the node it reaches is a misassignment (drawn thicker and on top). Main version: `assignment_diagram_contrast_anatomical`.
