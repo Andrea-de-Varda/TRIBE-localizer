@@ -19,7 +19,7 @@ tests/                pytest (run from the repository root: python -m pytest)
 
 ```bash
 python braingpt/build_abstracts.py            # local
-# on Engaging, from the repository root; once: pip install peft (tribe env) and HF access to mistralai/Mistral-7B-v0.1
+# on Engaging, from the repository root; once: pip install peft accelerate --no-deps (tribe env) and HF access to mistralai/Mistral-7B-v0.1
 sbatch braingpt/slurm/score.sbatch            # 1 GPU: score.py, then analyze.py
 ```
 

@@ -9,8 +9,11 @@
 #SBATCH --error=logs/%x_%j.err
 # BrainGPT perplexity scoring of all abstracts (one GPU), then the summary (CPU). Run from the repository root:
 #   sbatch braingpt/slurm/score.sbatch
-# Needs Hugging Face access to mistralai/Mistral-7B-v0.1 (gated) and `pip install peft` in the tribe env.
+# Needs Hugging Face access to mistralai/Mistral-7B-v0.1 (gated) and, once, in the tribe env:
+#   pip install peft accelerate --no-deps     (--no-deps keeps the TRIBE package versions unchanged)
 source slurm/common.sh
+set -e                                       # stop at the first failing step
+python -c "import peft, accelerate; print('peft', peft.__version__, 'accelerate', accelerate.__version__)"
 cd braingpt
 python score.py
 python analyze.py
