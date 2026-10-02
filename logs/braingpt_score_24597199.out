@@ -1,0 +1,65 @@
+peft 0.21.2 accelerate 1.15.0
+0/1410 scored (0 s)
+100/1410 scored (7 s)
+200/1410 scored (14 s)
+300/1410 scored (21 s)
+400/1410 scored (29 s)
+500/1410 scored (36 s)
+600/1410 scored (42 s)
+700/1410 scored (51 s)
+800/1410 scored (59 s)
+900/1410 scored (67 s)
+1000/1410 scored (75 s)
+1100/1410 scored (84 s)
+1200/1410 scored (92 s)
+1300/1410 scored (99 s)
+1400/1410 scored (107 s)
+saved 1410 scores (107 s)
+
+[calibrated (PMI) | anatomical] accuracy 0.76 (p = 0.0001), balanced 0.77
+pick    Lan  MD  phys  ToM  visual
+domain                            
+Lan       4   3     1    0       0
+MD        0  14     6    0       0
+phys      0   0     8    0       1
+ToM       0   0     0    9       0
+
+[calibrated (PMI) | network] accuracy 0.63 (p = 0.0001), balanced 0.66
+pick    Lan  MD  phys  ToM  visual
+domain                            
+Lan       1   1     0    6       0
+MD        0  10    10    0       0
+phys      0   0     9    0       0
+ToM       0   0     0    9       0
+
+[full-abstract perplexity | anatomical] accuracy 0.43 (p = 0.0021), balanced 0.39
+pick    Lan  MD  phys  ToM  visual
+domain                            
+Lan       0   4     0    4       0
+MD        0  11     0    9       0
+phys      0   1     0    8       0
+ToM       0   0     0    9       0
+
+[full-abstract perplexity | network] accuracy 0.39 (p = 0.0001), balanced 0.36
+pick    Lan  MD  phys  ToM  visual
+domain                            
+Lan       0   0     0    3       5
+MD        0   9     0    2       9
+phys      0   0     0    2       7
+ToM       0   0     0    9       0
+
+[results-sentence log-probability | anatomical] accuracy 0.37 (p = 0.0001), balanced 0.50
+pick    Lan  MD  phys  ToM  visual
+domain                            
+Lan       8   0     0    0       0
+MD       14   0     0    0       6
+phys      3   0     0    0       6
+ToM       0   0     0    9       0
+
+[results-sentence log-probability | network] accuracy 0.26 (p = 0.0001), balanced 0.36
+pick    Lan  MD  phys  ToM  visual
+domain                            
+Lan       8   0     0    0       0
+MD        8   0     0    0      12
+phys      0   0     0    0       9
+ToM       5   0     0    4       0
