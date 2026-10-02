@@ -9,7 +9,7 @@ import pandas as pd
 from matplotlib.patches import PathPatch
 from matplotlib.path import Path
 
-from bglib import CANDIDATES, DOMAINS, HERE, balanced_accuracy
+from bglib import CANDIDATES, DOMAINS, HERE
 from tribeloc.plotting import DOMAIN_COLORS, DOMAIN_LABELS, apply_style, save_fig
 
 CAND_COLORS = {**DOMAIN_COLORS, "visual": "#7f7f7f"}
@@ -68,14 +68,11 @@ def diagram(p, measure, style):
             curve(ax, pos[r.task], nodes[r.pick], CAND_COLORS[r.domain], 1.6 if not correct else 1.1,
                   .95 if not correct else .55, 3 if not correct else 2)
             ax.plot(pos[r.task], Y_TASK + .045, "o", ms=3.2, color=CAND_COLORS[r.domain], mec="black", mew=.3, zorder=4)
-    # network nodes (box sized to the label) with the number of tasks assigned
-    counts = p.pick.value_counts().reindex(CANDIDATES, fill_value=0)
+    # network nodes (box sized to the label)
     for c in CANDIDATES:
         ax.text(nodes[c], Y_NET, CAND_LABELS[c], ha="center", va="center", fontsize=9, color="white", weight="bold",
                 zorder=6, linespacing=1.0, bbox=dict(boxstyle="round,pad=0.45,rounding_size=0.6", fc=CAND_COLORS[c], ec="black", lw=.8,
                                     alpha=.95 if c != "visual" else .6))
-        ax.text(nodes[c], Y_NET + .15, f"{counts[c]} task{'s' if counts[c] != 1 else ''}", ha="center", va="bottom",
-                fontsize=7.5, color="#333333")
     # task labels and domain brackets (below the longest label)
     dom = p.set_index("task").domain
     for t, x in pos.items():
@@ -88,10 +85,8 @@ def diagram(p, measure, style):
                 color=DOMAIN_COLORS[d])
         ax.text((a + b) / 2, y - .12, f"{int(k.correct.sum())}/{len(k)} correct", ha="center", va="top", fontsize=8,
                 color=DOMAIN_COLORS[d])
-    ax.text(nodes["visual"], y - .03, f"Overall: {int(p.correct.sum())}/{len(p)}\nbalanced acc. {balanced_accuracy(p):.2f}",
-            ha="center", va="top", fontsize=8, color="#333333", linespacing=1.3)
     ax.set_xlim(min(pos.values()) - 1, nodes["visual"] + 2)
-    ax.set_ylim(Y_TASK - .68, Y_NET + .26)
+    ax.set_ylim(Y_TASK - .68, Y_NET + .14)
     ax.axis("off")
     save_fig(fig, HERE / "plots" / f"assignment_diagram_{measure}_{style}")
 
