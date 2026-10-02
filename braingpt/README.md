@@ -10,7 +10,7 @@ tasks.tsv             hand-written per task: background (what it studies), manip
 bglib.py              abstract construction, scoring, analysis helpers
 build_abstracts.py    -> data/abstracts.csv (all texts to score), data/abstracts_preview.txt (one abstract per task)
 score.py              -> results/scores.csv (GPU)
-analyze.py            -> results/{preferences,picks,summary}.csv, plots/
+analyze.py            -> results/{preferences,picks,summary}.csv, plots/ (confusion matrices, assignment counts)
 slurm/score.sbatch    scoring + analysis on Engaging
 tests/                pytest (run from the repository root: python -m pytest)
 ```
@@ -65,3 +65,20 @@ Accuracy over the 46 tasks (chance assessed by permuting task-to-domain labels, 
 | network names | full-abstract perplexity | 0.39 | 0.36 | < .001 | 0/8 | 9/20 | 0/9 | 9/9 |
 
 Calibration removes the candidate biases: with anatomical candidates the distractor is picked once (physics_brightness, which concerns light), against 12–21 times without calibration. Errors are structured. Anatomical: the six code tasks and number_sorting go to the physics candidate (dorsal premotor cortex, supplementary motor area, superior parietal lobule), which overlaps anatomically with the dorsal fronto-parietal part of the MD system; four of the eight language tasks go to MD (Language and MD preferences are close for the agreement tasks). Network names: all logic, equation and code tasks go to "the intuitive physics network", and seven of the eight language tasks to "the theory-of-mind network". The anatomical result is the more informative one (network names are mostly label matching, see the design notes), and it is the main result.
+
+### 2026-10-01 — Why language tasks went to ToM under PMI; across-task contrast (decision: Andrea)
+
+**Diagnosis.** The neutral abstract was not neutral about language: it describes participants reading written items and judging them, which by itself makes BrainGPT expect the language network (log-probability of the language results sentence after the neutral abstract, relative to the mean of the five candidates: +6.3 with network names, +6.5 anatomical). Uncalibrated, BrainGPT picked the language candidate for 8/8 language tasks under both phrasings, but the language abstracts raised the language sentence only a little above that ceiling (+0.6), less than they raised the theory-of-mind sentence from a low starting point (+1.5; the agreement items contain names and people). PMI therefore flipped most language tasks to ToM. The calibration context must control surface form only, and the neutral abstract also carried content.
+
+**Across-task contrast (now primary).** For each task and candidate, the results-sentence log-probability (mean over paraphrases) minus the mean over the other three domains' tasks for the same candidate (domain means weight tasks equally), i.e. the same "domain minus the other three" logic as the TRIBE contrasts. All abstracts share the template, so the reading-task component, phrase length and phrase frequency cancel without a hand-written neutral text. The pick is the candidate with the highest contrast. Because the reference depends on the domain labels, the permutation test recomputes the contrast and the picks under every permutation of the labels (10,000). PMI against the neutral abstract, BrainBench perplexity and the uncalibrated log-probability are still reported. Tests: a bias shared by all abstracts cancels; the contrast matches a hand computation; the permutation test gives p < .001 for a perfect scorer and p > .05 for noise.
+
+**Figures.** The per-domain bar plots now show counts: for each task domain, how many tasks were assigned to each candidate (`plots/assignments_<measure>`; decision: Andrea), next to the confusion matrices.
+
+**Results (across-task contrast).**
+
+| Candidates | Accuracy | Balanced | p | Language | Formal | Physics | Social |
+|---|---|---|---|---|---|---|---|
+| anatomical | 0.78 (36/46) | 0.81 | < .001 | 8/8 | 14/20 | 5/9 | 9/9 |
+| network names | 0.89 (41/46) | 0.94 | < .001 | 8/8 | 15/20 | 9/9 | 9/9 |
+
+Remaining errors: the five code tasks go to the physics candidate under both phrasings (anatomically, the physics regions — dorsal premotor, SMA, superior parietal — overlap the dorsal fronto-parietal MD system); with anatomical candidates, four physics tasks (buoyancy, brightness, solubility, temperature: descriptions of substances, liquids and light) go to early visual cortex, and logic_propositional_1 to the language candidate.

@@ -120,3 +120,37 @@ def test_pmi_removes_a_bias_shared_by_all_abstracts():
     assert (raw.pick == "visual").all()
     pmi = picks(task_preferences(scores, "pmi"))
     assert pmi.correct.all()
+
+
+def test_contrast_cancels_a_bias_shared_by_all_tasks_and_a_shared_baseline():
+    # 'Lan' is favoured in every abstract (as after any reading-task template); the contrast against the other
+    # domains' tasks removes it, while the uncalibrated measure picks Lan everywhere
+    scores = synthetic_scores(True, bias={"Lan": 3.0})
+    assert (picks(task_preferences(scores, "logprob_result")).pick == "Lan").all()
+    p = picks(task_preferences(scores, "contrast"))
+    assert p.correct.all()
+
+
+def test_contrast_values_against_other_domains():
+    from bglib import contrast_values
+    L = np.array([[1.0, 0], [3.0, 0], [0, 2.0], [0, 4.0], [5.0, 5.0], [7.0, 7.0], [1.0, 1.0], [1.0, 1.0]])
+    dom = np.repeat(["Lan", "MD", "phys", "ToM"], 2)
+    out = contrast_values(L, dom)
+    # task 0 (Lan), candidate 0: 1 - mean(MD 0, phys 6, ToM 1) = 1 - 7/3
+    assert out[0, 0] == pytest.approx(1 - 7 / 3)
+
+
+def test_contrast_permutation_recomputes_the_measure():
+    from bglib import raw_matrix
+    rng = np.random.default_rng(1)
+    scores = synthetic_scores(True)
+    p = picks(task_preferences(scores, "contrast"))
+    L = raw_matrix(scores, "anatomical").loc[list(zip(p.task, p.domain))].to_numpy()
+    acc, pv = accuracy_permutation(p, 2000, rng, L)
+    assert acc == 1.0 and pv < .001
+    # pure noise: picks are not tied to domains, so p should not be small
+    noise = synthetic_scores(True)
+    noise["logprob_result"] = rng.normal(size=len(noise))
+    pn = picks(task_preferences(noise, "contrast"))
+    Ln = raw_matrix(noise, "anatomical").loc[list(zip(pn.task, pn.domain))].to_numpy()
+    assert accuracy_permutation(pn, 2000, rng, Ln)[1] > .05

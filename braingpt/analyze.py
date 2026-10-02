@@ -1,7 +1,8 @@
 """Summarize BrainGPT scores (CPU, local): picks, confusion matrices, accuracy with permutation tests, and figures.
 
-Primary measure: PMI of the results sentence with the task abstract (log p given the task abstract minus log p given
-a neutral abstract), which removes the candidates' length and baseline-frequency differences. Also reported: BrainBench
+Primary measure: across-task contrast of the results-sentence log-probability (a task's value minus the mean over the
+other three domains' tasks, for the same candidate), which removes the candidates' length and baseline-frequency
+differences and the template shared by all abstracts. Also reported: PMI against a neutral abstract, BrainBench
 full-abstract perplexity and the uncalibrated results-sentence log-probability. Anatomical and network-name candidates.
 Writes results/{preferences,picks,summary}.csv and plots/.
 """
@@ -10,12 +11,12 @@ import numpy as np
 import pandas as pd
 
 from bglib import CANDIDATES, DOMAINS, HERE, accuracy_permutation, balanced_accuracy, confusion, load_config, picks, \
-    task_preferences
+    raw_matrix, task_preferences
 from tribeloc.plotting import DOMAIN_COLORS, DOMAIN_LABELS, apply_style, save_fig, style_axes
 
 CAND_COLORS = {**DOMAIN_COLORS, "visual": "#7f7f7f"}
 CAND_LABELS = {"Lan": "Language", "MD": "MD", "ToM": "ToM", "phys": "Physics", "visual": "Visual"}
-MEASURES = {"pmi": "calibrated (PMI)", "ppl": "full-abstract perplexity", "logprob_result": "results-sentence log-probability"}
+MEASURES = {"contrast": "calibrated (vs other domains' tasks)", "pmi": "calibrated (PMI, neutral abstract)", "ppl": "full-abstract perplexity", "logprob_result": "results-sentence log-probability"}
 
 
 def plot_confusion(p, style, measure):
@@ -37,31 +38,31 @@ def plot_confusion(p, style, measure):
     save_fig(fig, HERE / "plots" / f"confusion_{style}_{measure}")
 
 
-def plot_preferences(pref, measure):
-    styles = list(pref["style"].unique())
+def plot_assignments(all_picks, measure):
+    """Per task domain: number of tasks assigned to each candidate network (target bar highlighted); one row per
+    candidate phrasing."""
+    q = all_picks[all_picks.measure == measure]
+    styles = list(q["style"].unique())
     fig, axes = plt.subplots(len(styles), len(DOMAINS), figsize=(8.8 * .85, 2.9 * .85 * len(styles)), squeeze=False)
-    rng = np.random.default_rng(0)
     for r, style in enumerate(styles):
-        q = pref[pref["style"] == style]
         for ax, d in zip(axes[r], DOMAINS):
-            g = q[q.domain == d]
+            g = q[(q["style"] == style) & (q.domain == d)]
+            counts = g.pick.value_counts().reindex(CANDIDATES, fill_value=0)
             for x, c in enumerate(CANDIDATES):
                 target = c == d
-                v = g[c].to_numpy()
-                ax.bar(x, v.mean(), width=.7, color=CAND_COLORS[c], alpha=.6 if target else .3, edgecolor="black",
+                ax.bar(x, counts[c], width=.7, color=CAND_COLORS[c], alpha=.75 if target else .3, edgecolor="black",
                        linewidth=1.2 if target else .8, zorder=2)
-                ax.errorbar(x, v.mean(), yerr=v.std(ddof=1) / np.sqrt(len(v)), color="black", capsize=3, lw=1.1, zorder=4)
-                ax.scatter(x + rng.uniform(-.18, .18, len(v)), v, s=8, color=CAND_COLORS[c], edgecolor="black", lw=.3,
-                           alpha=.9 if target else .4, zorder=3)
-            ax.axhline(0, color="black", lw=.8, zorder=1)
+                if counts[c]:
+                    ax.text(x, counts[c] + .02 * len(g), str(counts[c]), ha="center", va="bottom", fontsize=8)
+            ax.set_ylim(0, len(g) * 1.15)
             ax.set_xticks(range(len(CANDIDATES)), [CAND_LABELS[c] for c in CANDIDATES] if r == len(styles) - 1 else [],
                           rotation=30, ha="right", fontsize=9)
             if r == 0:
-                ax.set_title(f"{DOMAIN_LABELS[d]} tasks", fontsize=11, weight="bold", color=DOMAIN_COLORS[d])
+                ax.set_title(f"{DOMAIN_LABELS[d]} tasks (n = {len(g)})", fontsize=10, weight="bold", color=DOMAIN_COLORS[d])
             style_axes(ax)
-        axes[r, 0].set_ylabel(f"Preference ({style})", fontsize=10)
+        axes[r, 0].set_ylabel(f"Tasks assigned ({style})", fontsize=10)
     fig.tight_layout(w_pad=1.0)
-    save_fig(fig, HERE / "plots" / f"preferences_{measure}")
+    save_fig(fig, HERE / "plots" / f"assignments_{measure}")
 
 
 def main():
@@ -74,11 +75,13 @@ def main():
         pref = task_preferences(scores, measure)
         pref.insert(0, "measure", measure)
         all_pref.append(pref)
-        plot_preferences(pref, measure)
         for style, q in pref.groupby("style", sort=False):
             p = picks(q)
             all_picks.append(p)
-            acc, pval = accuracy_permutation(p, cfg["n_permutations"], rng)
+            L = None
+            if measure == "contrast":                           # labels enter the measure: recompute per permutation
+                L = raw_matrix(scores, style).loc[list(zip(p.task, p.domain))].to_numpy()
+            acc, pval = accuracy_permutation(p, cfg["n_permutations"], rng, L)
             rec = dict(measure=measure, style=style, accuracy=acc, p_perm=pval, balanced_accuracy=balanced_accuracy(p),
                        n_tasks=len(p), picked_visual=int((p.pick == "visual").sum()))
             for d in DOMAINS:
@@ -88,7 +91,10 @@ def main():
             print(f"\n[{MEASURES[measure]} | {style}] accuracy {acc:.2f} (p = {pval:.4f}), "
                   f"balanced {rec['balanced_accuracy']:.2f}\n{confusion(p).to_string()}", flush=True)
     pd.concat(all_pref).to_csv(HERE / "results" / "preferences.csv", index=False)
-    pd.concat(all_picks).to_csv(HERE / "results" / "picks.csv", index=False)
+    all_picks = pd.concat(all_picks)
+    all_picks.to_csv(HERE / "results" / "picks.csv", index=False)
+    for measure in MEASURES:
+        plot_assignments(all_picks, measure)
     pd.DataFrame(summary).to_csv(HERE / "results" / "summary.csv", index=False)
 
 

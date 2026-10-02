@@ -88,13 +88,30 @@ def add_pmi(scores):
     return s
 
 
-def task_preferences(scores, measure="pmi"):
+def contrast_values(L, domains):
+    """Across-task contrast: for each task and candidate, the task's value minus the mean of the other three domains'
+    mean values for that candidate (tasks weighted equally within domain), as in the TRIBE domain contrast.
+    L: tasks x candidates; domains: domain label per task. Shared template, phrase length and phrase frequency cancel."""
+    means = {d: L[domains == d].mean(0) for d in DOMAINS}
+    out = np.empty_like(L)
+    for d in DOMAINS:
+        out[domains == d] = L[domains == d] - np.mean([means[o] for o in DOMAINS if o != d], axis=0)
+    return out
+
+
+def task_preferences(scores, measure="contrast"):
     """Per task and style: preference for each candidate, averaged over paraphrases, minus its mean over candidates
-    (higher = preferred; 0 = average). measure: pmi (primary), ppl (BrainBench full-text perplexity, as minus log
+    (higher = preferred; 0 = average). measure: contrast (primary: results-sentence log-probability relative to the
+    other domains' tasks), pmi (relative to a neutral abstract), ppl (BrainBench full-text perplexity, as minus log
     perplexity) or logprob_result (uncalibrated results-sentence log-probability)."""
     s = add_pmi(scores) if measure == "pmi" else scores[scores.task != NULL_TASK].copy()
-    s["value"] = {"pmi": lambda: s.pmi, "ppl": lambda: -np.log(s.ppl), "logprob_result": lambda: s.logprob_result}[measure]()
+    s["value"] = {"pmi": lambda: s.pmi, "ppl": lambda: -np.log(s.ppl), "logprob_result": lambda: s.logprob_result,
+                  "contrast": lambda: s.logprob_result}[measure]()
     m = s.groupby(["task", "domain", "style", "candidate"], sort=False).value.mean().unstack("candidate")[CANDIDATES]
+    if measure == "contrast":
+        for style in m.index.get_level_values("style").unique():
+            k = m.index.get_level_values("style") == style
+            m.loc[k] = contrast_values(m.loc[k].to_numpy(), m.index.get_level_values("domain")[k].to_numpy())
     return m.sub(m.mean(1), axis=0).reset_index()
 
 
@@ -110,13 +127,27 @@ def confusion(p):
     return pd.crosstab(p.domain, p.pick).reindex(index=DOMAINS, columns=CANDIDATES, fill_value=0)
 
 
-def accuracy_permutation(p, n_perm, rng):
-    """Accuracy over tasks and a one-sided p from permuting task-to-domain labels (keeps the model's picks and
-    the number of tasks per domain, so a model that always picks one candidate is not rewarded)."""
+def accuracy_permutation(p, n_perm, rng, L=None):
+    """Accuracy over tasks and a one-sided p from permuting task-to-domain labels (keeps the number of tasks per
+    domain, so a model that always picks one candidate is not rewarded). L (tasks x candidates, uncentred values,
+    in p's row order): the measure itself depends on the labels (across-task contrast), so the picks are recomputed
+    under every permutation; otherwise the model's picks are fixed and only the labels move."""
     acc = p.correct.mean()
     picks_, dom = p.pick.to_numpy(), p.domain.to_numpy()
-    null = np.array([(picks_ == rng.permutation(dom)).mean() for _ in range(n_perm)])
+    cands = np.array(CANDIDATES)
+    null = np.empty(n_perm)
+    for i in range(n_perm):
+        perm = rng.permutation(dom)
+        pk = picks_ if L is None else cands[contrast_values(L, perm).argmax(1)]
+        null[i] = (pk == perm).mean()
     return acc, (1 + (null >= acc).sum()) / (1 + n_perm)
+
+
+def raw_matrix(scores, style):
+    """Tasks x candidates mean results-sentence log-probability (over paraphrases), task order as in task_preferences."""
+    s = scores[(scores.task != NULL_TASK) & (scores["style"] == style)]
+    return s.groupby(["task", "domain"], sort=False).apply(
+        lambda g: g.groupby("candidate").logprob_result.mean()[CANDIDATES], include_groups=False)
 
 
 def balanced_accuracy(p):
