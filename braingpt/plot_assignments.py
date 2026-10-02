@@ -33,7 +33,7 @@ TASK_SHORT = {
     "norm_moral": "NormMoral", "primary_emotions": "PrimEmo", "secondary_emotions": "SecEmo",
     "social_interactions": "SocInt", "social_relations": "SocRel"}
 GAP = 1.6           # extra horizontal space between domain groups
-WRONG = "#8c8c8c"   # curve colour for misassignments
+WRONG = "#c4c4c4"   # curve colour for misassignments
 Y_TASK, Y_NET = 0.0, 1.0
 
 
