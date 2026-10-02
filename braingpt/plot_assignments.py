@@ -1,6 +1,6 @@
 """Assignment diagram (CPU, local): the 46 tasks at the bottom, grouped by domain, the five candidate networks at the
 top, and one curve per task to the network BrainGPT assigned it to. Curves take the colour of the task's target
-network, so a curve whose colour differs from the node it reaches is a misassignment.
+network when the assignment is correct and grey when it is not.
 Writes plots/assignment_diagram_<measure>_<style>.{svg,png}.
 """
 import matplotlib.pyplot as plt
@@ -33,6 +33,7 @@ TASK_SHORT = {
     "norm_moral": "NormMoral", "primary_emotions": "PrimEmo", "secondary_emotions": "SecEmo",
     "social_interactions": "SocInt", "social_relations": "SocRel"}
 GAP = 1.6           # extra horizontal space between domain groups
+WRONG = "#8c8c8c"   # curve colour for misassignments
 Y_TASK, Y_NET = 0.0, 1.0
 
 
@@ -65,8 +66,8 @@ def diagram(p, measure, style):
     # curves: correct ones underneath, misassignments on top
     for correct in (True, False):
         for r in p[p.correct == correct].itertuples():
-            curve(ax, pos[r.task], nodes[r.pick], CAND_COLORS[r.domain], 1.6 if not correct else 1.1,
-                  .95 if not correct else .55, 3 if not correct else 2)
+            curve(ax, pos[r.task], nodes[r.pick], CAND_COLORS[r.domain] if correct else WRONG, 1.1 if correct else 1.6,
+                  .55 if correct else .9, 2 if correct else 3)
             ax.plot(pos[r.task], Y_TASK + .045, "o", ms=3.2, color=CAND_COLORS[r.domain], mec="black", mew=.3, zorder=4)
     # network nodes (box sized to the label)
     for c in CANDIDATES:
